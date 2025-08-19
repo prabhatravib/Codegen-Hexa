@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 94%;
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 94%;
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 94%;
+    --primary: 50 100% 50%; /* neon yellow */
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 94%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 0 0% 12%;
+    --accent-foreground: 0 0% 94%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 50 100% 50%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground min-h-screen;
+    background-image: url('/PiText_background.png');
+    background-size: 100% auto;
+    background-position: center top;
+    background-attachment: fixed;
+  }
+  h1, h2, h3 {
+    text-shadow: 0 0 8px rgba(0,0,0,.7);
+  }
+}
+
+/* Containers similar to PiText */
+.container-card {
+  @apply max-w-5xl mx-auto my-4 p-6 rounded-xl border shadow-[0_4px_20px_rgba(0,0,0,0.3)] bg-white/5 backdrop-blur; 
+}
+.section-glass {
+  @apply rounded-xl border bg-white/5 backdrop-blur p-6;
+}
+
+/* CTA buttons */
+.btn-primary {
+  @apply bg-[hsl(50_100%_50%)] text-black font-medium px-5 py-3 rounded-lg hover:bg-[hsl(50_100%_60%)] transition-colors;
+}
+.btn-secondary {
+  @apply bg-secondary text-secondary-foreground px-4 py-2 rounded-lg hover:bg-secondary/80 transition-colors;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { @apply bg-muted; }
+::-webkit-scrollbar-thumb { @apply bg-muted-foreground/30 rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/50; }
+
+/* Code block styling */
+.code-block { @apply bg-black/50 rounded-lg p-4 font-mono text-sm overflow-x-auto border; }
+
+/* Mermaid diagram container */
+.mermaid-container { @apply bg-black/40 rounded-lg p-4 shadow-sm border; }
+
+/* Voice agent animations */
+.voice-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
