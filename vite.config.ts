@@ -16,5 +16,19 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        worker: resolve(__dirname, 'src/worker-voice/index.ts')
+      },
+      output: {
+        entryFileNames: (chunkInfo) => {
+          return chunkInfo.name === 'worker' ? 'worker.js' : '[name].js'
+        }
+      }
+    }
   },
+  worker: {
+    format: 'es'
+  }
 })

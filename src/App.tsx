@@ -1,8 +1,6 @@
-import React from 'react'
-import { CodeGenInterface } from './components/CodeGenInterface'
-import { VoiceAgent } from './components/VoiceAgent'
 import { VoiceProvider } from './hooks/useVoiceInteraction'
 import { CodeGenProvider } from './store/codeGenStore'
+import { CodeGenInterface } from './components/CodeGenInterface'
 
 function App() {
   return (

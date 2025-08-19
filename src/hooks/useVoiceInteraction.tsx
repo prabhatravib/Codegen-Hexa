@@ -37,8 +37,6 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
 
   const {
     connect,
-    disconnect,
-    sendAudio,
     isConnected,
     connectionState
   } = useVoiceConnection()
@@ -56,7 +54,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     
     try {
       // Request microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      await navigator.mediaDevices.getUserMedia({ audio: true })
       setIsListening(true)
       
       // Start audio recording and streaming

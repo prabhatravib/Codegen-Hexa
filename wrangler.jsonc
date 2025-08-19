@@ -1,19 +1,16 @@
 {
-  "name": "voice-codegen-hexa",
+  "name": "codegen-hexa",
   "main": "src/worker-voice/index.ts",
   "compatibility_date": "2024-01-01",
   "compatibility_flags": ["nodejs_compat"],
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "VOICE_SESSION",
-        "class_name": "VoiceSession"
-      }
-    ]
-  },
-  "env": {
-    "OPENAI_REALTIME_MODEL": ""
-  },
+  "migrations": [
+    {
+      "tag": "v2",
+      "deleted_classes": [
+        "VoiceSession"
+      ]
+    }
+  ],
   "vars": {
     "PYTHON_API_URL": ""
   }

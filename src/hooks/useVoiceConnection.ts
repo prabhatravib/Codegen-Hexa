@@ -25,7 +25,7 @@ export const useVoiceConnection = () => {
 
     try {
       // Connect to Cloudflare Workers WebSocket endpoint
-      const wsUrl = import.meta.env.VITE_WS_URL || 'wss://your-worker.your-subdomain.workers.dev/voice'
+      const wsUrl = 'wss://codegen-hexa.prabhatravib.workers.dev/voice'
       const ws = new WebSocket(wsUrl)
 
       ws.onopen = () => {
