@@ -58,41 +58,39 @@ export const CodeGenInterface: React.FC = () => {
     <div className="space-y-6 text-left">
       {/* Input Area */}
       {step === 'input' && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="section-glass">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="input-area">
           <div className="space-y-4">
-            <div className="input-area">
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe the code you want to generate..."
-                rows={4}
-                className="w-full p-3 rounded-lg bg-black/30 border focus:ring-2 focus:ring-[hsl(50_100%_50%)] focus:border-transparent"
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Describe the code you want to generate..."
+              rows={4}
+              className="w-full p-4 rounded-lg bg-black/30 border-2 border-white/20 focus:ring-2 focus:ring-[#FFD600] focus:border-transparent text-white resize-none min-h-[100px] font-inherit"
+              disabled={isLoading}
+            />
+            <div className="input-options">
+              <select
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                className="p-3 rounded-lg bg-black/30 border border-white/30 text-white min-w-[100px]"
                 disabled={isLoading}
-              />
-              <div className="flex items-center gap-3 mt-3">
-                <select
-                  value={selectedLanguage}
-                  onChange={(e) => setSelectedLanguage(e.target.value)}
-                  className="p-3 rounded-lg bg-black/30 border focus:ring-2 focus:ring-[hsl(50_100%_50%)]"
-                  disabled={isLoading}
-                >
-                  {languages.map(lang => (
-                    <option key={lang.value} value={lang.value}>
-                      {lang.icon} {lang.label}
-                    </option>
-                  ))}
-                </select>
-                <button onClick={handleGenerateDiagram} disabled={!prompt.trim() || isLoading} className="btn-primary flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
-                  {isLoading ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black" />
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5 mr-2" />
-                      Create CodeFlow
-                    </>
-                  )}
-                </button>
-              </div>
+              >
+                {languages.map(lang => (
+                  <option key={lang.value} value={lang.value}>
+                    {lang.icon} {lang.label}
+                  </option>
+                ))}
+              </select>
+              <button onClick={handleGenerateDiagram} disabled={!prompt.trim() || isLoading} className="btn-primary flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+                {isLoading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black" />
+                ) : (
+                  <>
+                    <Send className="w-5 h-5 mr-2" />
+                    Create CodeFlow
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </motion.div>
@@ -100,8 +98,8 @@ export const CodeGenInterface: React.FC = () => {
 
       {/* Diagram Section */}
       {step === 'diagram' && diagram && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="section-glass">
-          <h3 className="text-center text-[hsl(50_100%_50%)] text-xl mb-4">Proposed Code Flow</h3>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="diagram-section">
+          <h3>Proposed Code Flow</h3>
           <div className="diagram-layout">
             <div className="diagram-main">
               <MermaidDiagram diagram={diagram} />
@@ -123,7 +121,7 @@ export const CodeGenInterface: React.FC = () => {
 
       {/* Code Section */}
       {step === 'code' && generatedCode && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="section-glass">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="results-container">
           <h3 className="text-xl mb-4">Generated Code</h3>
           <CodeDisplay code={generatedCode} language={selectedLanguage} />
           <div className="mt-4 flex gap-3">
@@ -138,7 +136,7 @@ export const CodeGenInterface: React.FC = () => {
                 a.click()
                 URL.revokeObjectURL(url)
               }}
-              className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center"
+              className="approve-btn flex items-center"
             >
               <Download className="w-4 h-4 mr-2"/>Download Code
             </button>

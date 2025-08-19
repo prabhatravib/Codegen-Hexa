@@ -31,32 +31,89 @@
   * {
     @apply border-border;
   }
+  
   body {
-    @apply bg-background text-foreground min-h-screen;
-    background-image: url('/PiText_background.png');
-    background-size: 100% auto;
-    background-position: center top;
-    background-attachment: fixed;
+    @apply text-foreground min-h-screen;
+    /* Layered background system: black base + lightbulb image */
+    background: #000 url("/PiText_background.png") center/100% auto no-repeat fixed;
+    color: #f0f0f0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 1rem;
+    text-align: center;
   }
+  
   h1, h2, h3 {
-    text-shadow: 0 0 8px rgba(0,0,0,.7);
+    text-shadow: 0 0 8px rgba(0,0,0,.8);
   }
 }
 
-/* Containers similar to PiText */
-.container-card {
-  @apply max-w-5xl mx-auto my-4 p-6 rounded-xl border shadow-[0_4px_20px_rgba(0,0,0,0.3)] bg-white/5 backdrop-blur; 
-}
-.section-glass {
-  @apply rounded-xl border bg-white/5 backdrop-blur p-6;
+/* Banner text styling matching pitext_codegen */
+.banner-sub {
+  font-size: 1.1rem;
+  margin: 0.15rem auto 0.25rem;
+  color: rgba(255, 255, 255, 0.9);
 }
 
-/* CTA buttons */
-.btn-primary {
-  @apply bg-[hsl(50_100%_50%)] text-black font-medium px-5 py-3 rounded-lg hover:bg-[hsl(50_100%_60%)] transition-colors;
+.banner-example {
+  font-size: 0.9rem;
+  margin: 0.15rem auto 0.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.3;
 }
+
+/* Glass-morphism containers matching pitext_codegen */
+.container-card {
+  @apply max-w-5xl mx-auto my-4 p-6 rounded-xl;
+  background: rgba(255,255,255,.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.3);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.section-glass {
+  background: rgba(255,255,255,.1);
+  backdrop-filter: blur(2px);
+  border: 1px solid rgba(255,255,255,.3);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+/* Input area styling matching pitext_codegen */
+.input-area {
+  max-width: 800px;
+  margin: 0.25rem auto 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255,255,255,.1);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+}
+
+/* CTA buttons matching pitext_codegen */
+.btn-primary {
+  @apply font-medium px-5 py-3 rounded-lg transition-all duration-300 ease-in-out;
+  background: linear-gradient(45deg, #FFD600, #FFA000);
+  color: #000;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 214, 0, 0.4);
+}
+
 .btn-secondary {
-  @apply bg-secondary text-secondary-foreground px-4 py-2 rounded-lg hover:bg-secondary/80 transition-colors;
+  @apply px-4 py-2 rounded-lg transition-all duration-300 ease-in-out;
+  background: transparent;
+  color: #FFD600;
+  border: 2px solid #FFD600;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 214, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 /* Custom scrollbar */
@@ -66,10 +123,18 @@
 ::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/50; }
 
 /* Code block styling */
-.code-block { @apply bg-black/50 rounded-lg p-4 font-mono text-sm overflow-x-auto border; }
+.code-block { 
+  @apply rounded-lg p-4 font-mono text-sm overflow-x-auto;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+}
 
 /* Mermaid diagram container */
-.mermaid-container { @apply bg-black/40 rounded-lg p-4 shadow-sm border; }
+.mermaid-container { 
+  @apply rounded-lg p-4 shadow-sm;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+}
 
 /* Voice agent animations */
 .voice-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
