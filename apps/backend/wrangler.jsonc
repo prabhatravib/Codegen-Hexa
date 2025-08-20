@@ -2,8 +2,5 @@
   "name": "codegen-hexa-backend",
   "main": "src/main.ts",
   "compatibility_date": "2024-01-01",
-  "compatibility_flags": ["nodejs_compat"],
-  "vars": {
-    "PYTHON_API_URL": "https://your-python-backend.com"
-  }
+  "compatibility_flags": ["nodejs_compat"]
 }

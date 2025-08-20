@@ -1,16 +1,7 @@
 {
   "name": "codegen-hexa",
-  "main": "src/worker-voice/index.ts",
   "compatibility_date": "2024-01-01",
   "compatibility_flags": ["nodejs_compat"],
-  "migrations": [
-    {
-      "tag": "v2",
-      "deleted_classes": [
-        "VoiceSession"
-      ]
-    }
-  ],
   "vars": {
     "PYTHON_API_URL": ""
   }

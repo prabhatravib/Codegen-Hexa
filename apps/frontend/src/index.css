@@ -35,15 +35,42 @@
   body {
     @apply text-foreground min-h-screen;
     /* Layered background system: black base + lightbulb image */
-    background: #000 url("/PiText_background.png") center/100% auto no-repeat fixed;
+    background: #000 url("/PiText_background.png") center/cover no-repeat fixed !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
     color: #f0f0f0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 1rem;
     text-align: center;
+    position: relative;
+  }
+  
+  /* Add a subtle overlay to ensure readability while preserving background visibility */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: -1;
+    pointer-events: none;
   }
   
   h1, h2, h3 {
     text-shadow: 0 0 8px rgba(0,0,0,.8);
+  }
+  
+  /* Enhanced text shadows for better readability over background image */
+  h1 {
+    text-shadow: 0 0 20px rgba(0,0,0,.9), 0 0 8px rgba(0,0,0,.8);
+  }
+  
+  .banner-sub, .banner-example {
+    text-shadow: 0 0 12px rgba(0,0,0,.9);
   }
 }
 
@@ -84,9 +111,97 @@
   max-width: 800px;
   margin: 0.25rem auto 0.75rem;
   padding: 0.75rem;
-  background: rgba(255,255,255,.1);
+  background: rgba(0,0,0,.7);
   border-radius: 12px;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255,255,255,.2);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+/* Text input box styling matching pitext_codegen */
+.input-area textarea,
+.code-input {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 2px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.1);
+  color: #fff;
+  resize: vertical;
+  min-height: 100px;
+  font-family: inherit;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.input-area textarea:focus,
+.code-input:focus {
+  outline: none;
+  border-color: #FFD600;
+  background: rgba(255,255,255,.15);
+  box-shadow: 0 0 0 3px rgba(255, 214, 0, 0.1);
+}
+
+.input-area textarea::placeholder,
+.code-input::placeholder {
+  color: rgba(255,255,255,.6);
+}
+
+/* Diagram section - completely separate panel below input */
+.diagram-section {
+  max-width: 95vw;
+  margin: 2rem auto;
+  background: rgba(0,0,0,.8);
+  border-radius: 16px;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,.2);
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+
+.diagram-section h3 {
+  text-align: center;
+  margin: 0 0 1.5rem 0;
+  color: #FFD600;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+/* Input options styling */
+.input-options {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.input-options select,
+.language-select {
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255,255,255,.1);
+  border: 2px solid rgba(255,255,255,.2);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.input-options select:focus {
+  outline: none;
+  border-color: #FFD600;
+}
+
+.input-options select option {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.input-options button {
+  border-radius: 12px;
+  min-width: 150px;
 }
 
 /* CTA buttons matching pitext_codegen */
@@ -96,11 +211,19 @@
   color: #000;
   border: none;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(255, 214, 0, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-secondary {
@@ -124,18 +247,309 @@
 
 /* Code block styling */
 .code-block { 
-  @apply rounded-lg p-4 font-mono text-sm overflow-x-auto;
+  @apply rounded-xl p-4 font-mono text-sm overflow-x-auto;
   background: rgba(255,255,255,.1);
   border: 1px solid rgba(255,255,255,.2);
+  border-radius: 16px;
 }
 
 /* Mermaid diagram container */
 .mermaid-container { 
-  @apply rounded-lg p-4 shadow-sm;
+  @apply rounded-xl p-4 shadow-sm;
   background: rgba(255,255,255,.1);
   border: 1px solid rgba(255,255,255,.2);
+  border-radius: 16px;
+}
+
+/* Ensure all flowchart nodes show pointer cursor */
+.mermaid-container svg g[id*="flowchart"] rect,
+.mermaid-container svg g[id*="flowchart"] circle,
+.mermaid-container svg g[id*="flowchart"] ellipse,
+.mermaid-container svg g[id*="flowchart"] polygon,
+.mermaid-container svg g[id*="flowchart"] path,
+.mermaid-container svg g[id*="flowchart"] text,
+.mermaid-container svg g.node rect,
+.mermaid-container svg g.node circle,
+.mermaid-container svg g.node ellipse,
+.mermaid-container svg g.node polygon,
+.mermaid-container svg g.node path,
+.mermaid-container svg g.node text,
+.mermaid-container svg .cluster rect,
+.mermaid-container svg .cluster circle,
+.mermaid-container svg .cluster ellipse,
+.mermaid-container svg .cluster polygon,
+.mermaid-container svg .cluster path,
+.mermaid-container svg .cluster text {
+  cursor: pointer !important;
+}
+
+/* Also ensure the node groups themselves are clickable */
+.mermaid-container svg g[id*="flowchart"],
+.mermaid-container svg g.node,
+.mermaid-container svg .cluster {
+  cursor: pointer !important;
+}
+
+/* Diagram container - single column layout with buttons below */
+.diagram-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* New two-column layout for diagram section */
+.diagram-layout {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  margin: 1.5rem 0;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 1024px) {
+  .diagram-layout {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .diagram-main {
+    flex: none;
+    width: 100%;
+  }
+  
+  .diagram-sidebar {
+    flex: none;
+    width: 100%;
+    max-width: none;
+    min-width: auto;
+  }
+}
+
+.diagram-main {
+  flex: 0 0 70%;
+  min-height: 300px;
+}
+
+.diagram-sidebar {
+  flex: 0 0 30%;
+  min-width: 300px;
+  max-width: 400px;
+  background: rgba(0,0,0,.8);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.2);
+  min-height: 300px;
+  backdrop-filter: blur(15px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.sidebar-placeholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.diagram-actions {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.diagram-actions .btn-primary {
+  min-width: 150px;
+}
+
+.diagram-actions .btn-secondary {
+  min-width: 120px;
+}
+
+/* Deep dive panel styling */
+.deep-dive-panel {
+  background: rgba(0,0,0,.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 16px;
+  padding: 1.5rem;
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.deep-dive-panel h4 {
+  color: #FFD600;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.deep-dive-panel .selected-node {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 12px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  color: white;
+  font-weight: 500;
+}
+
+.deep-dive-panel .question-input {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 12px;
+  padding: 0.75rem;
+  color: white;
+  width: 100%;
+  margin-bottom: 1rem;
+  resize: none;
+  min-height: 80px;
+}
+
+.deep-dive-panel .question-input:focus {
+  outline: none;
+  border-color: #FFD600;
+  box-shadow: 0 0 0 2px rgba(255, 214, 0, 0.2);
+}
+
+.deep-dive-panel .ask-button {
+  background: linear-gradient(45deg, #FFD600, #FFA000);
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.deep-dive-panel .ask-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 214, 0, 0.4);
+}
+
+.deep-dive-panel .ask-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Response styling */
+.deep-dive-panel .response-area {
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-top: 1rem;
+  color: white;
+  flex: 1;
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+.deep-dive-panel .response-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.deep-dive-panel .response-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.deep-dive-panel .action-button {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 8px;
+  padding: 0.5rem;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.deep-dive-panel .action-button:hover {
+  background: rgba(255,255,255,.2);
+  transform: translateY(-1px);
+}
+
+/* Error message styling */
+.error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: rgb(254, 226, 226);
+  border-radius: 8px;
+  padding: 1rem;
 }
 
 /* Voice agent animations */
 .voice-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+
+/* Force VoiceAgent hexagon to stay small */
+.voice-agent-hexagon {
+  width: 72px !important;
+  height: 72px !important;
+  max-width: 72px !important;
+  max-height: 72px !important;
+  min-width: 72px !important;
+  min-height: 72px !important;
+}
+
+.voice-agent-hexagon svg {
+  width: 72px !important;
+  height: 72px !important;
+  max-width: 72px !important;
+  max-height: 72px !important;
+  min-width: 72px !important;
+  min-height: 72px !important;
+}
+
+/* Ensure VoiceAgent is positioned in top right corner */
+.voice-agent-container {
+  position: fixed !important;
+  top: 16px !important;
+  right: 16px !important;
+  z-index: 50 !important;
+  left: auto !important;
+  bottom: auto !important;
+}
+
+/* Results container styling */
+.results-container {
+  background: rgba(255,255,255,.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  position: relative;
+}
+
+.results-container::before {
+  content: '';
+  position: absolute;
+  top: -1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #FFD600, transparent);
+  border-radius: 1px;
+}
+
+.results-container h3 {
+  color: #FFD600;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+/* Error message styling */
+.error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 12px;
+  padding: 1rem;
+  color: #fca5a5;
+}

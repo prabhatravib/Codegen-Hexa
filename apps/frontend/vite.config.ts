@@ -18,6 +18,6 @@ export default defineConfig({
     sourcemap: true,
   },
   define: {
-    'process.env.VITE_PUBLIC_BACKEND_URL': JSON.stringify(process.env.VITE_PUBLIC_BACKEND_URL)
+    'import.meta.env.VITE_PUBLIC_BACKEND_URL': JSON.stringify(process.env.VITE_PUBLIC_BACKEND_URL || 'https://codegen-hexa-backend.prabhatravib.workers.dev')
   }
 })

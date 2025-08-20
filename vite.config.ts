@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
+      '@': resolve(__dirname, './apps/frontend/src'),
     },
   },
   server: {
@@ -18,8 +18,8 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
-        worker: resolve(__dirname, 'src/worker-voice/index.ts')
+        main: resolve(__dirname, 'apps/frontend/index.html'),
+        worker: resolve(__dirname, 'apps/frontend/src/worker-voice/index.ts')
       },
       output: {
         entryFileNames: (chunkInfo) => {
@@ -30,5 +30,8 @@ export default defineConfig({
   },
   worker: {
     format: 'es'
+  },
+  define: {
+    'import.meta.env.VITE_PUBLIC_BACKEND_URL': JSON.stringify(process.env.VITE_PUBLIC_BACKEND_URL || 'https://codegen-hexa-backend.prabhatravib.workers.dev')
   }
 })
