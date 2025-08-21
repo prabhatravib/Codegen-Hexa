@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Download, ArrowLeft, RefreshCw, Play, ChevronDown, ChevronUp, Copy, PlayCircle } from 'lucide-react'
+import { Download, RefreshCw, PlayCircle, FileText, Folder, Database, Network, Building, FileCode, List, TrendingUp, Code, Key, Edit, HelpCircle, Menu, Settings, X } from 'lucide-react'
+import MarimoCell from './MarimoCell'
 
 interface MarimoNotebookProps {
   marimoNotebook: string
   onBack: () => void
 }
 
-interface MarimoCell {
+interface MarimoCellData {
   id: string
   code: string
   output: string
@@ -19,7 +20,7 @@ interface MarimoCell {
 }
 
 export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNotebookProps) {
-  const [cells, setCells] = useState<MarimoCell[]>([])
+  const [cells, setCells] = useState<MarimoCellData[]>([])
   const [pyodide, setPyodide] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -58,7 +59,7 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
     initPyodide()
   }, [])
 
-  const parseMarimoNotebook = (content: string): MarimoCell[] => {
+  const parseMarimoNotebook = (content: string): MarimoCellData[] => {
     // Split by @app.cell() decorators
     const cellPattern = /@app\.cell\(\)[\s\S]*?(?=@app\.cell\(\)|$)/g
     const matches = content.match(cellPattern) || []
@@ -157,26 +158,6 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
     URL.revokeObjectURL(url)
   }
 
-  const getStatusText = (status: string) => {
-    switch(status) {
-      case 'pending': return '⏳ Pending'
-      case 'running': return '🔄 Running'
-      case 'success': return '✅ Success'
-      case 'error': return '❌ Error'
-      default: return '⏳ Pending'
-    }
-  }
-
-  const getStatusColor = (status: string): string => {
-    switch(status) {
-      case 'pending': return 'text-yellow-400'
-      case 'running': return 'text-blue-400'
-      case 'success': return 'text-green-400'
-      case 'error': return 'text-red-400'
-      default: return 'text-gray-400'
-    }
-  }
-
   if (isLoading) {
     return (
       <motion.div
@@ -231,177 +212,180 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
+      className="min-h-screen bg-gray-50"
     >
-      {/* Header */}
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-white">🚀 Interactive Marimo Notebook</h2>
-            <p className="text-gray-300">Your Python notebook is ready to run interactively!</p>
-          </div>
-          <div className="flex space-x-3">
-            <button
-              onClick={runAllCells}
-              className="btn-primary flex items-center space-x-2"
-            >
-              <PlayCircle className="w-4 h-4" />
-              <span>Run All Cells</span>
-            </button>
-            <button
-              onClick={handleDownload}
-              className="btn-secondary flex items-center space-x-2"
-            >
-              <Download className="w-4 h-4" />
-              <span>Download</span>
-            </button>
-            <button
-              onClick={onBack}
-              className="btn-outline"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Flowchart
-            </button>
-          </div>
+      {/* Professional Marimo Header */}
+      <div className="bg-gradient-to-r from-purple-900 via-blue-900 to-indigo-900 text-white p-6 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-4 left-8 w-8 h-8 bg-yellow-400 rounded-full blur-sm"></div>
+          <div className="absolute top-12 left-16 w-4 h-4 bg-yellow-300 rounded-full blur-sm"></div>
+          <div className="absolute top-8 right-12 w-6 h-6 bg-yellow-400 rounded-full blur-sm"></div>
+          <div className="absolute top-16 right-8 w-3 h-3 bg-yellow-300 rounded-full blur-sm"></div>
         </div>
-
-        {/* Status Bar */}
-        <div className="flex items-center space-x-6 text-sm">
-          <span className="text-green-400">
-            <strong>{cells.length}</strong> cells ready
-          </span>
-          <span className="text-blue-400">
-            • <strong>{executedCount}</strong> executed
-          </span>
-          <span className="text-red-400">
-            • <strong>{errorCount}</strong> errors
-          </span>
+        
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-yellow-400 rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-purple-900" />
+              </div>
+              <h1 className="text-3xl font-bold">Interactive Marimo Notebook</h1>
+            </div>
+            <button
+              onClick={() => window.open('#', '_blank')}
+              className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-colors border border-white/30"
+            >
+              Open in New Tab
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Interactive Notebook */}
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-purple-600/80 to-blue-600/80 text-white p-4">
-          <h3 className="text-lg font-semibold">🎯 Interactive Notebook</h3>
-          <p className="text-sm opacity-90">Run your Python code in real-time with full interactivity</p>
+      {/* Main Notebook Interface */}
+      <div className="flex min-h-screen">
+        {/* Left Sidebar */}
+        <div className="w-16 bg-gray-800 border-r border-gray-700 flex flex-col items-center py-6 space-y-6">
+          <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+            <FileText className="w-5 h-5 text-gray-300" />
+          </div>
+          <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+            <Folder className="w-5 h-5 text-gray-300" />
+          </div>
+          <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+            <Database className="w-5 h-5 text-gray-300" />
+          </div>
+          <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+            <Network className="w-5 h-5 text-gray-300" />
+          </div>
+          <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+            <Building className="w-5 h-5 text-gray-300" />
+          </div>
+          <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+            <FileCode className="w-5 h-5 text-gray-300" />
+          </div>
+          <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+            <List className="w-5 h-5 text-gray-300" />
+          </div>
+          <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+            <TrendingUp className="w-5 h-5 text-gray-300" />
+          </div>
+          <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+            <Code className="w-5 h-5 text-gray-300" />
+          </div>
+          <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+            <Key className="w-5 h-5 text-gray-300" />
+          </div>
+          <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+            <Edit className="w-5 h-5 text-gray-300" />
+          </div>
+          <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+            <HelpCircle className="w-5 h-5 text-gray-300" />
+          </div>
         </div>
-        
-        <div className="p-6 space-y-4">
-          {cells.map((cell, index) => (
-            <motion.div 
-              key={cell.id} 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="border border-gray-600/50 rounded-lg overflow-hidden bg-gray-900/30 hover:bg-gray-900/50 transition-all duration-200"
-            >
-              <div className="bg-gray-800/50 px-4 py-3 border-b border-gray-600/50 flex justify-between items-center">
-                <div className="flex items-center space-x-3">
-                  <span className="font-mono text-sm text-gray-300">cell_{index}</span>
-                  {cell.executionCount && (
-                    <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded">
-                      [{cell.executionCount}]
-                    </span>
-                  )}
-                  <span className={`text-sm ${getStatusColor(cell.status)}`}>
-                    {getStatusText(cell.status)}
+
+        {/* Main Content Area */}
+        <div className="flex-1 bg-white">
+          {/* Top Controls */}
+          <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-600 font-mono">/tmp/marimo_notebook_25e325ae.py</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <Menu className="w-4 h-4 text-gray-600" />
+              </button>
+              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <Settings className="w-4 h-4 text-gray-600" />
+              </button>
+              <button
+                onClick={onBack}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+          </div>
+
+          {/* Notebook Content */}
+          <div className="p-6 space-y-4">
+            {/* Action Bar */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm text-gray-600">
+                    <strong>{cells.length}</strong> cells ready
+                  </span>
+                  <span className="text-sm text-blue-600">
+                    • <strong>{executedCount}</strong> executed
+                  </span>
+                  <span className="text-sm text-red-600">
+                    • <strong>{errorCount}</strong> errors
                   </span>
                 </div>
-                
-                <div className="flex items-center space-x-2">
+                <div className="flex space-x-3">
                   <button
-                    onClick={() => runCell(index)}
-                    disabled={cell.isRunning || !pyodide}
-                    className={`p-2 rounded-md text-sm font-medium transition-colors ${
-                      cell.isRunning || !pyodide
-                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
-                    }`}
-                    title="Run cell"
+                    onClick={runAllCells}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
                   >
-                    {cell.isRunning ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Play className="w-4 h-4" />
-                    )}
+                    <PlayCircle className="w-4 h-4" />
+                    <span>Run All Cells</span>
                   </button>
-                  
                   <button
-                    onClick={() => copyCellCode(cell.code)}
-                    className="p-2 hover:bg-gray-600/50 rounded-md transition-colors"
-                    title="Copy cell code"
+                    onClick={handleDownload}
+                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
                   >
-                    <Copy className="w-4 h-4 text-gray-400" />
-                  </button>
-                  
-                  <button
-                    onClick={() => toggleCell(index)}
-                    className="p-2 hover:bg-gray-600/50 rounded-md transition-colors"
-                    title={cell.collapsed ? "Expand" : "Collapse"}
-                  >
-                    {cell.collapsed ? (
-                      <ChevronDown className="w-4 h-4 text-gray-400" />
-                    ) : (
-                      <ChevronUp className="w-4 h-4 text-gray-400" />
-                    )}
+                    <Download className="w-4 h-4" />
+                    <span>Download</span>
                   </button>
                 </div>
               </div>
-              
-              {!cell.collapsed && (
-                <>
-                  <div className="bg-gray-900 text-green-400 p-4 font-mono text-sm">
-                    <pre className="whitespace-pre-wrap">{cell.code}</pre>
-                  </div>
-                  
-                  <div className="p-4 bg-gray-800/30">
-                    {cell.output ? (
-                      <div className={`p-3 rounded-md ${
-                        cell.hasError ? 'bg-red-900/20 text-red-300 border border-red-700/50' : 'bg-green-900/20 text-green-300 border border-green-700/50'
-                      }`}>
-                        <pre className="whitespace-pre-wrap text-sm">{cell.output}</pre>
-                      </div>
-                    ) : (
-                      <div className="text-gray-500 text-sm text-center py-4">
-                        Click "Run Cell" to execute this code
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      {/* Raw Code Display */}
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg overflow-hidden">
-        <details className="group">
-          <summary className="bg-gray-700/50 px-6 py-4 cursor-pointer hover:bg-gray-700/70 transition-colors">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">📝 Raw Notebook Code</h3>
-              <span className="text-gray-400 group-open:rotate-180 transition-transform">
-                ▼
-              </span>
             </div>
-          </summary>
-          <div className="p-6 border-t border-gray-600/50">
-            <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm">
-              <code>{marimoNotebook}</code>
-            </pre>
-          </div>
-        </details>
-      </div>
 
-      {/* Instructions */}
-      <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-blue-300 mb-3">💡 How to Use</h3>
-        <div className="space-y-2 text-blue-200">
-          <p>• <strong>Interactive Mode:</strong> Click "Run Cell" on any cell to execute the Python code</p>
-          <p>• <strong>Real-time Output:</strong> See results immediately below each cell</p>
-          <p>• <strong>Run All:</strong> Execute all cells in sequence with the "Run All Cells" button</p>
-          <p>• <strong>Download:</strong> Save the notebook as a Python file for offline use</p>
-          <p>• <strong>Error Handling:</strong> Any errors are clearly displayed with helpful messages</p>
+            {/* Cells */}
+            {cells.map((cell, index) => (
+              <MarimoCell
+                key={cell.id}
+                cell={cell}
+                index={index}
+                onRun={runCell}
+                onToggle={toggleCell}
+                onCopy={copyCellCode}
+                pyodide={pyodide}
+              />
+            ))}
+
+            {/* Raw Code Display */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+              <details className="group">
+                <summary className="bg-gray-100 px-6 py-4 cursor-pointer hover:bg-gray-200 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-800">📝 Raw Notebook Code</h3>
+                    <span className="text-gray-500 group-open:rotate-180 transition-transform">
+                      ▼
+                    </span>
+                  </div>
+                </summary>
+                <div className="p-6 border-t border-gray-200">
+                  <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm">
+                    <code>{marimoNotebook}</code>
+                  </pre>
+                </div>
+              </details>
+            </div>
+
+            {/* Instructions */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-blue-800 mb-3">💡 How to Use</h3>
+              <div className="space-y-2 text-blue-700">
+                <p>• <strong>Interactive Mode:</strong> Click "Run Cell" on any cell to execute the Python code</p>
+                <p>• <strong>Real-time Output:</strong> See results immediately below each cell</p>
+                <p>• <strong>Run All:</strong> Execute all cells in sequence with the "Run All Cells" button</p>
+                <p>• <strong>Download:</strong> Save the notebook as a Python file for offline use</p>
+                <p>• <strong>Error Handling:</strong> Any errors are clearly displayed with helpful messages</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </motion.div>
