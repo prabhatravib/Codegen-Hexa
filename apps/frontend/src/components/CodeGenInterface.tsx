@@ -1,21 +1,22 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Code, Download, Send } from 'lucide-react'
+import { Code, Send } from 'lucide-react'
 import { useCodeGen } from '../hooks/useCodeGen'
 import { MermaidDiagram } from './MermaidDiagram'
-import { CodeDisplay } from './CodeDisplay'
 import { DeepDivePanel } from './DeepDivePanel'
+import MarimoNotebook from './MarimoNotebook'
+
 export const CodeGenInterface: React.FC = () => {
   const [prompt, setPrompt] = useState('')
   const [selectedLanguage, setSelectedLanguage] = useState('python')
-  const [step, setStep] = useState<'input' | 'diagram' | 'code'>('input')
+  const [step, setStep] = useState<'input' | 'diagram' | 'marimo'>('input')
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
   
   const {
     generateDiagram,
-    generateCode,
+    generateMarimoNotebook,
     diagram,
-    generatedCode,
+    marimoNotebook,
     isLoading,
     error,
     reset
@@ -35,10 +36,15 @@ export const CodeGenInterface: React.FC = () => {
     if (success) setStep('diagram')
   }
 
-  const handleGenerateCode = async () => {
-    if (!diagram) return
-    const success = await generateCode(diagram, selectedLanguage)
-    if (success) setStep('code')
+  const handleGenerateMarimoNotebook = async () => {
+    if (!diagram || !prompt.trim()) return
+    console.log('Generating Marimo notebook...', { diagram: !!diagram, prompt: !!prompt, language: selectedLanguage })
+    const success = await generateMarimoNotebook(diagram, selectedLanguage, prompt)
+    console.log('Marimo generation result:', success)
+    if (success) {
+      console.log('Setting step to marimo')
+      setStep('marimo')
+    }
   }
 
   const handleNodeSelect = (nodeName: string) => {
@@ -122,8 +128,8 @@ export const CodeGenInterface: React.FC = () => {
                       💡 <strong>Tip:</strong> Click on any node in the flowchart to ask deep dive questions about it!
                     </div>
                     <div className="flex gap-3 justify-center">
-                      <button onClick={handleGenerateCode} disabled={isLoading} className="btn-primary flex items-center justify-center disabled:opacity-50">
-                        {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black" /> : (<><Code className="w-4 h-4 mr-2"/>Generate Code</>)}
+                      <button onClick={handleGenerateMarimoNotebook} disabled={isLoading} className="btn-primary flex items-center justify-center disabled:opacity-50">
+                        {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black" /> : (<><Code className="w-4 h-4 mr-2"/>Generate Marimo Notebook</>)}
                       </button>
                       <button onClick={clearAll} className="btn-secondary">Start Over</button>
                     </div>
@@ -166,30 +172,12 @@ export const CodeGenInterface: React.FC = () => {
         )}
       </div>
 
-      {/* Code Section - Appears below the flowchart when code is generated */}
-      {step === 'code' && generatedCode && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="results-container">
-          <h3 className="text-xl mb-4">Generated Code</h3>
-          <CodeDisplay code={generatedCode} language={selectedLanguage} />
-          <div className="mt-4 flex gap-3">
-            <button
-              onClick={() => {
-                const blob = new Blob([generatedCode], { type: 'text/plain' })
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url
-                a.download = `generated_code.${selectedLanguage === 'typescript' ? 'ts' : selectedLanguage}`
-                a.click()
-                URL.revokeObjectURL(url)
-              }}
-              className="approve-btn flex items-center"
-            >
-              <Download className="w-4 h-4 mr-2"/>Download Code
-            </button>
-            <button onClick={backToFlowchart} className="btn-secondary">Back to Flowchart</button>
-            <button onClick={clearAll} className="ml-auto text-sm text-white/70 hover:text-white">Start Over</button>
-          </div>
-        </motion.div>
+      {/* Marimo Notebook Section - Appears below the flowchart when notebook is generated */}
+      {step === 'marimo' && marimoNotebook && (
+        <MarimoNotebook
+          marimoNotebook={marimoNotebook}
+          onBack={backToFlowchart}
+        />
       )}
 
       {error && (

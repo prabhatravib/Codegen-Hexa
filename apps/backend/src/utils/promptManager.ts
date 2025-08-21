@@ -6,13 +6,15 @@
 import { 
   FLOWCHART_GENERATOR_PROMPT, 
   CODE_GENERATOR_PROMPT, 
-  DEEP_DIVE_PROMPT 
+  DEEP_DIVE_PROMPT,
+  MARIMO_GENERATOR_PROMPT
 } from '../prompts'
 
 interface PromptTemplates {
   flowchart_generator: string
   code_generator: string
   deepdive: string
+  marimo_generator: string
 }
 
 class PromptManager {
@@ -22,7 +24,8 @@ class PromptManager {
     this.prompts = {
       flowchart_generator: FLOWCHART_GENERATOR_PROMPT,
       code_generator: CODE_GENERATOR_PROMPT,
-      deepdive: DEEP_DIVE_PROMPT
+      deepdive: DEEP_DIVE_PROMPT,
+      marimo_generator: MARIMO_GENERATOR_PROMPT
     }
   }
 

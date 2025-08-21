@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 
 interface CodeGenState {
   diagram: string | null
-  generatedCode: string | null
+  marimoNotebook: string | null
   isLoading: boolean
   error: string | null
 }
@@ -10,7 +10,7 @@ interface CodeGenState {
 export const useCodeGen = () => {
   const [state, setState] = useState<CodeGenState>({
     diagram: null,
-    generatedCode: null,
+    marimoNotebook: null,
     isLoading: false,
     error: null
   })
@@ -56,38 +56,43 @@ export const useCodeGen = () => {
     }
   }, [])
 
-  const generateCode = useCallback(async (diagram: string, language: string): Promise<boolean> => {
+  const generateMarimoNotebook = useCallback(async (diagram: string, language: string, prompt: string): Promise<boolean> => {
+    console.log('generateMarimoNotebook called with:', { diagram: diagram.substring(0, 50), language, prompt: prompt.substring(0, 50) })
     setState(prev => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      // Call Cloudflare Workers backend API to generate code
-      const response = await fetch('https://codegen-hexa-backend.prabhatravib.workers.dev/api/generate-code', {
+      // Call Cloudflare Workers backend API to generate Marimo notebook
+      console.log('Fetching from /api/marimo/generate endpoint...')
+      const response = await fetch('https://codegen-hexa-backend.prabhatravib.workers.dev/api/marimo/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ diagram, language })
+        body: JSON.stringify({ diagram, language, prompt })
       })
 
+      console.log('Response status:', response.status)
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const data = await response.json()
+      console.log('Response data:', { success: data.success, hasNotebook: !!data.marimoNotebook, hasViewerUrl: !!data.viewerUrl })
       
-      if (data.success && data.code) {
+      if (data.success && data.marimoNotebook) {
+        console.log('Setting marimoNotebook state with', data.marimoNotebook.substring(0, 100))
         setState(prev => ({
           ...prev,
-          generatedCode: data.code,
+          marimoNotebook: data.marimoNotebook,
           isLoading: false,
           error: null
         }))
         return true
       } else {
-        throw new Error(data.error || 'Failed to generate code')
+        throw new Error(data.error || 'Failed to generate Marimo notebook')
       }
     } catch (error) {
-      console.error('Error generating code:', error)
+      console.error('Error generating Marimo notebook:', error)
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -100,7 +105,7 @@ export const useCodeGen = () => {
   const reset = useCallback(() => {
     setState({
       diagram: null,
-      generatedCode: null,
+      marimoNotebook: null,
       isLoading: false,
       error: null
     })
@@ -123,7 +128,7 @@ export const useCodeGen = () => {
   return {
     ...state,
     generateDiagram,
-    generateCode,
+    generateMarimoNotebook,
     reset,
     clearError,
     checkHealth
