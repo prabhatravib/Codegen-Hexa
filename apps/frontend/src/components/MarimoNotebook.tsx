@@ -86,7 +86,7 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
     setTimeout(() => {
       const saveToMarimoContainer = async () => {
         try {
-          const notebookId = `notebook_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          const notebookId = `notebook_${Date.now()}_${Math.random().toString(36).substring(2, 11).replace(/[^a-z0-9]/g, '')}`
           
           const response = await fetch('https://codegen-marimo.prabhatravib.workers.dev/marimo/api/save', {
             method: 'POST',

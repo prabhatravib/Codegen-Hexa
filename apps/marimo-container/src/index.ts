@@ -107,7 +107,7 @@ class MarimoWorker {
         });
       }
 
-      const notebookId = `notebook_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const notebookId = `notebook_${Date.now()}_${Math.random().toString(36).substring(2, 11).replace(/[^a-z0-9]/g, '')}`;
       const notebookData: NotebookData = {
         content,
         timestamp: Date.now(),
@@ -257,7 +257,7 @@ print("You can edit and run this code interactively!")
 `;
 
       // Save demo notebook to KV
-      const notebookId = 'demo_notebook';
+      const notebookId = 'demo_notebook_' + Date.now();
       const notebookData: NotebookData = {
         content: demoContent,
         timestamp: Date.now(),
