@@ -50,4 +50,41 @@ EDUCATIONAL VALUE:
 - Show best practices for the specific {language}
 - Make the notebook suitable for learning and experimentation
 
+EXAMPLE STRUCTURE:
+# /// script
+import marimo as mo
+
+app = mo.App()
+
+@app.cell
+def __():
+    # Setup and imports
+    import pandas as pd
+    import numpy as np
+    print("🚀 Marimo Notebook Initialized")
+    return
+
+@app.cell
+def load_data():
+    # Load and prepare data
+    data = pd.DataFrame({'x': [1, 2, 3], 'y': [4, 5, 6]})
+    print(f"Data loaded: {len(data)} rows")
+    return data
+
+@app.cell
+def process_data(data):
+    # Process the data
+    result = data * 2
+    print("Data processed successfully")
+    return result
+
+@app.cell
+def display_results(data, result):
+    # Display results
+    print("Original data:")
+    print(data)
+    print("\\nProcessed data:")
+    print(result)
+    return
+
 Return ONLY the complete Marimo notebook code with proper structure, no explanations or additional text.`

@@ -1,0 +1,6 @@
+marimo>=0.14.0
+numpy
+pandas
+matplotlib
+httpx
+pydantic

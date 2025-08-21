@@ -1,0 +1,77 @@
+/* Input area styling matching pitext_codegen */
+.input-area {
+  max-width: 800px;
+  margin: 0.25rem auto 0.75rem;
+  padding: 0.75rem;
+  background: rgba(0,0,0,.7);
+  border-radius: 12px;
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255,255,255,.2);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+/* Text input box styling matching pitext_codegen */
+.input-area textarea,
+.code-input {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 2px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.1);
+  color: #fff;
+  resize: vertical;
+  min-height: 100px;
+  font-family: inherit;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.input-area textarea:focus,
+.code-input:focus {
+  outline: none;
+  border-color: #FFD600;
+  background: rgba(255,255,255,.15);
+  box-shadow: 0 0 0 3px rgba(255, 214, 0, 0.1);
+}
+
+.input-area textarea::placeholder,
+.code-input::placeholder {
+  color: rgba(255,255,255,.6);
+}
+
+/* Input options styling */
+.input-options {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.input-options select,
+.language-select {
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255,255,255,.1);
+  border: 2px solid rgba(255,255,255,.2);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.input-options select:focus {
+  outline: none;
+  border-color: #FFD600;
+}
+
+.input-options select option {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.input-options button {
+  border-radius: 12px;
+  min-width: 150px;
+}

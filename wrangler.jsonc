@@ -1,8 +1,12 @@
 {
-  "name": "codegen-hexa",
-  "compatibility_date": "2024-01-01",
-  "compatibility_flags": ["nodejs_compat"],
+  "name": "codegen-hexa-backend",
+  "main": "src/entry.py",
+  "compatibility_flags": [
+    "python_workers"
+  ],
+  "compatibility_date": "2024-08-18",
   "vars": {
-    "PYTHON_API_URL": ""
+    "OPENAI_API_KEY": "",
+    "OPENAI_REALTIME_MODEL": "gpt-4o-mini"
   }
 }

@@ -1,6 +1,7 @@
 # Exclude reference folders from Cloudflare Workers deployment
 hexa/
 pitext_codegen/
+src/
 
 # Exclude development files
 *.log

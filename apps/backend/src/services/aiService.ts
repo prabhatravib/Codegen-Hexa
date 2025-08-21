@@ -1,66 +1,28 @@
-// services/aiService.ts
+// AI Service for generating various content using OpenAI API
 import { promptManager } from '../utils/promptManager'
 
-// AI-powered Marimo notebook generation function
-export async function generateMarimoNotebookWithAI(prompt: string, diagram: string, language: string, apiKey: string): Promise<string> {
-  const systemPrompt = promptManager.formatPrompt('marimo_generator', { language })
-  const userPrompt = `Create a Marimo notebook for the following requirement in ${language}:
-
-User Request: ${prompt}
-
-Flowchart:
-\`\`\`mermaid
-${diagram}
-\`\`\`
-
-Generate a complete, interactive Marimo notebook that implements the logic shown in the flowchart. Make it educational and user-friendly.`
-
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.3,
-        max_tokens: 3000
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json() as { error: { message: string } };
-      throw new Error(`OpenAI API error: ${errorData.error.message}`);
+interface OpenAIResponse {
+  choices: Array<{
+    message: {
+      content: string
     }
-
-    const data = await response.json() as { choices: Array<{ message: { content: string } }> };
-    return data.choices[0].message.content.trim();
-  } catch (error) {
-    console.error('Error generating Marimo notebook with AI:', error);
-    throw error;
-  }
+  }>
 }
 
-// AI-powered flowchart generation function
-export async function generateFlowchartWithAI(prompt: string, language: string, apiKey: string): Promise<string> {
-  const systemPrompt = promptManager.getPrompt('flowchart_generator')
-  const userPrompt = `Create a Mermaid flowchart for the following requirement in ${language}:
-
-${prompt}
-
-Generate a flowchart that shows the logical flow of this system.`
-
+export async function generateFlowchartWithAI(
+  prompt: string, 
+  language: string, 
+  openaiApiKey: string
+): Promise<string> {
   try {
+    const systemPrompt = promptManager.formatPrompt('flowchart_generator', { language })
+    const userPrompt = `Generate a flowchart for: ${prompt}`
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'gpt-4',
@@ -68,116 +30,154 @@ Generate a flowchart that shows the logical flow of this system.`
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.3,
-        max_tokens: 800
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json() as { error: { message: string } };
-      throw new Error(`OpenAI API error: ${errorData.error.message}`);
-    }
-
-    const data = await response.json() as { choices: Array<{ message: { content: string } }> };
-    return data.choices[0].message.content.trim();
-  } catch (error) {
-    console.error('Error generating flowchart with AI:', error);
-    throw error;
-  }
-}
-
-// AI-powered code generation function
-export async function generateCodeWithAI(diagram: string, language: string, apiKey: string): Promise<string> {
-  const systemPrompt = promptManager.getPrompt('code_generator')
-  const userPrompt = `Generate ${language} code based on this Mermaid flowchart:
-
-\`\`\`
-${diagram}
-\`\`\`
-
-Create a complete, runnable ${language} program that implements the logic shown in the flowchart.`
-
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.3,
+        temperature: 0.7,
         max_tokens: 2000
       })
-    });
+    })
 
     if (!response.ok) {
-      const errorData = await response.json() as { error: { message: string } };
-      throw new Error(`OpenAI API error: ${errorData.error.message}`);
+      throw new Error(`OpenAI API error: ${response.status}`)
     }
 
-    const data = await response.json() as { choices: Array<{ message: { content: string } }> };
-    return data.choices[0].message.content.trim();
+    const data = await response.json() as OpenAIResponse
+    return data.choices[0]?.message?.content || 'Failed to generate flowchart'
   } catch (error) {
-    console.error('Error generating code with AI:', error);
-    throw error;
+    console.error('Error generating flowchart with AI:', error)
+    throw error
   }
 }
 
-// Helper function to generate deep dive explanation for a flowchart node
-export async function generateDeepDiveWithAI(nodeName: string, question: string, originalPrompt: string, flowchart: string, apiKey: string): Promise<string> {
-  const prompt = promptManager.formatPrompt('deepdive', {
-    node_name: nodeName,
-    question: question,
-    original_prompt: originalPrompt,
-    flowchart: flowchart
-  })
-
-  // Debug logging
-  console.log('Generated Deep Dive Prompt:', {
-    prompt_length: prompt.length,
-    node_name: nodeName,
-    question: question,
-    original_prompt_length: originalPrompt ? originalPrompt.length : 0,
-    flowchart_length: flowchart ? flowchart.length : 0
-  })
-
+export async function generateCodeWithAI(
+  diagram: string, 
+  language: string, 
+  openaiApiKey: string
+): Promise<string> {
   try {
+    const systemPrompt = promptManager.formatPrompt('code_generator', { language })
+    const userPrompt = `Generate ${language} code based on this flowchart: ${diagram}`
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'gpt-4',
-        messages: [{ role: 'user', content: prompt }],
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
         temperature: 0.7,
-        max_tokens: 1000
+        max_tokens: 3000
       })
-    });
+    })
 
     if (!response.ok) {
-      const errorData = await response.json() as { error: { message: string } };
-      throw new Error(`OpenAI API error: ${errorData.error.message}`);
+      throw new Error(`OpenAI API error: ${response.status}`)
     }
 
-    const data = await response.json() as { choices: Array<{ message: { content: string } }> };
-    const result = data.choices[0].message.content;
-    
-    // Debug logging
-    console.log('OpenAI Response received:', {
-      response_length: result ? result.length : 0,
-      model: 'gpt-4'
-    })
-    
-    return result;
+    const data = await response.json() as OpenAIResponse
+    return data.choices[0]?.message?.content || 'Failed to generate code'
   } catch (error) {
-    console.error('Error generating deep dive with AI:', error);
-    throw error;
+    console.error('Error generating code with AI:', error)
+    throw error
+  }
+}
+
+export async function generateDeepDiveWithAI(
+  nodeName: string, 
+  question: string, 
+  originalPrompt: string, 
+  flowchart: string, 
+  openaiApiKey: string
+): Promise<string> {
+  try {
+    const systemPrompt = promptManager.getPrompt('deepdive')
+    const userPrompt = `Node: ${nodeName}\nQuestion: ${question}\nOriginal Prompt: ${originalPrompt}\nFlowchart: ${flowchart}`
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`)
+    }
+
+    const data = await response.json() as OpenAIResponse
+    return data.choices[0]?.message?.content || 'Failed to generate deep dive explanation'
+  } catch (error) {
+    console.error('Error generating deep dive with AI:', error)
+    throw error
+  }
+}
+
+export async function generateMarimoNotebookWithAI(
+  prompt: string, 
+  diagram: string, 
+  language: string, 
+  openaiApiKey: string
+): Promise<string> {
+  try {
+    const systemPrompt = promptManager.formatPrompt('marimo_generator', { language })
+    const userPrompt = `Generate a Marimo notebook for: ${prompt}\nBased on this flowchart: ${diagram}`
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 4000
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`)
+    }
+
+    const data = await response.json() as OpenAIResponse
+    const notebookContent = data.choices[0]?.message?.content || 'Failed to generate Marimo notebook'
+    
+    // Validate that the generated content looks like a Marimo notebook
+    if (!notebookContent.includes('# /// script') || !notebookContent.includes('import marimo')) {
+      console.warn('Generated content may not be a valid Marimo notebook, attempting to fix...')
+      
+      // Try to fix common issues
+      let fixedContent = notebookContent
+      if (!fixedContent.includes('# /// script')) {
+        fixedContent = '# /// script\n' + fixedContent
+      }
+      if (!fixedContent.includes('import marimo')) {
+        fixedContent = fixedContent.replace(/^/, 'import marimo as mo\n\napp = mo.App()\n\n')
+      }
+      
+      return fixedContent
+    }
+    
+    return notebookContent
+  } catch (error) {
+    console.error('Error generating Marimo notebook with AI:', error)
+    throw error
   }
 }

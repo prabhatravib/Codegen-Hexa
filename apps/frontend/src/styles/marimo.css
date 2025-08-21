@@ -1,0 +1,262 @@
+/* Marimo Notebook Container */
+.marimo-notebook-container {
+  background: #1a1b26;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 2rem auto;
+  max-width: 95vw;
+  border: 1px solid #2d2e3f;
+  display: flex;
+  flex-direction: column;
+  min-height: 80vh;
+}
+
+.marimo-header {
+  background: linear-gradient(135deg, #2d2e3f 0%, #1a1b26 100%);
+  border-bottom: 1px solid #2d2e3f;
+  padding: 1.5rem;
+}
+
+/* Pyodide Controls */
+.pyodide-controls {
+  background: #2d2e3f;
+  border-bottom: 1px solid #3d3e4f;
+}
+
+.pyodide-controls h3 {
+  color: #ffffff;
+  margin: 0;
+}
+
+.pyodide-controls .grid {
+  gap: 1rem;
+}
+
+/* Status Indicators */
+.pyodide-controls .grid > div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pyodide-controls .w-3.h-3 {
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Content Area */
+.marimo-notebook-container .flex-1 {
+  display: flex;
+  min-height: 0;
+}
+
+.marimo-notebook-container .w-1\/2 {
+  flex: 1;
+}
+
+.marimo-notebook-container .border-r {
+  border-color: #3d3e4f;
+}
+
+/* Code Display */
+.marimo-notebook-container .bg-gray-900 {
+  background-color: #0d0e14;
+  border: 1px solid #2d2e3f;
+}
+
+.marimo-notebook-container pre {
+  margin: 0;
+  font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
+  line-height: 1.5;
+}
+
+.marimo-notebook-container code {
+  color: #e2e8f0;
+}
+
+/* Execution Output */
+.marimo-notebook-container .bg-gray-900 {
+  background-color: #0d0e14;
+  border: 1px solid #2d2e3f;
+}
+
+.marimo-notebook-container .text-center {
+  text-align: center;
+}
+
+.marimo-notebook-container .py-8 {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.marimo-notebook-container .mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.marimo-notebook-container .mb-4 {
+  margin-bottom: 1rem;
+}
+
+.marimo-notebook-container .mt-2 {
+  margin-top: 0.5rem;
+}
+
+/* Error and Success States */
+.marimo-notebook-container .text-red-400 {
+  color: #f87171;
+}
+
+.marimo-notebook-container .text-green-400 {
+  color: #4ade80;
+}
+
+.marimo-notebook-container .text-yellow-400 {
+  color: #facc15;
+}
+
+.marimo-notebook-container .text-gray-400 {
+  color: #9ca3af;
+}
+
+.marimo-notebook-container .text-gray-300 {
+  color: #d1d5db;
+}
+
+.marimo-notebook-container .text-white {
+  color: #ffffff;
+}
+
+.marimo-notebook-container .font-semibold {
+  font-weight: 600;
+}
+
+.marimo-notebook-container .font-medium {
+  font-weight: 500;
+}
+
+.marimo-notebook-container .text-sm {
+  font-size: 0.875rem;
+}
+
+.marimo-notebook-container .text-lg {
+  font-size: 1.125rem;
+}
+
+.marimo-notebook-container .text-2xl {
+  font-size: 1.5rem;
+}
+
+/* Background Colors */
+.marimo-notebook-container .bg-red-900\/20 {
+  background-color: rgba(127, 29, 29, 0.2);
+}
+
+.marimo-notebook-container .bg-green-900\/20 {
+  background-color: rgba(20, 83, 45, 0.2);
+}
+
+.marimo-notebook-container .bg-gray-800 {
+  background-color: #1f2937;
+}
+
+.marimo-notebook-container .bg-gray-700 {
+  background-color: #374151;
+}
+
+.marimo-notebook-container .bg-gray-600 {
+  background-color: #4b5563;
+}
+
+.marimo-notebook-container .bg-gray-900 {
+  background-color: #111827;
+}
+
+/* Borders */
+.marimo-notebook-container .border-red-700 {
+  border-color: #b91c1c;
+}
+
+.marimo-notebook-container .border-green-700 {
+  border-color: #15803d;
+}
+
+.marimo-notebook-container .border-gray-700 {
+  border-color: #374151;
+}
+
+.marimo-notebook-container .border-3d3e4f {
+  border-color: #3d3e4f;
+}
+
+/* Buttons */
+.marimo-btn-primary {
+  @apply flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-medium rounded-lg transition-colors;
+}
+
+.marimo-btn-secondary {
+  @apply flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-medium rounded-lg transition-colors;
+}
+
+.marimo-btn-primary:disabled,
+.marimo-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Footer */
+.marimo-notebook-container .border-t {
+  border-top: 1px solid #3d3e4f;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .marimo-notebook-container .flex-1 {
+    flex-direction: column;
+  }
+  
+  .marimo-notebook-container .w-1\/2 {
+    width: 100%;
+  }
+  
+  .marimo-notebook-container .border-r {
+    border-right: none;
+    border-bottom: 1px solid #3d3e4f;
+  }
+  
+  .pyodide-controls .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Animation */
+.marimo-notebook-container .animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Scrollbars */
+.marimo-notebook-container .overflow-auto::-webkit-scrollbar {
+  width: 8px;
+}
+
+.marimo-notebook-container .overflow-auto::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+.marimo-notebook-container .overflow-auto::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+.marimo-notebook-container .overflow-auto::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}

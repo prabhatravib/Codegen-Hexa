@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { promptManager } from './utils/promptManager'
-import marimoRouter from './routes/marimoRoutes'
+import marimoRouter from './routes/marimo'
 import { generateFlowchartWithAI, generateCodeWithAI, generateDeepDiveWithAI } from './services/aiService'
 
 // Define the environment interface
@@ -23,7 +23,10 @@ app.use('*', cors({
     'https://codegen-hexa.prabhatravib.workers.dev',
     'https://codegen-hexa-backend.prabhatravib.workers.dev'
   ],
-  credentials: true
+  credentials: true,
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposeHeaders: ['Content-Length', 'X-Requested-With']
 }))
 
 // Mount Marimo routes
@@ -44,6 +47,8 @@ app.get('/', (c) => {
       '/api/deepdive-node',
       '/api/generate-code',
       '/api/marimo/generate',
+      '/api/marimo/create-viewer',
+      '/api/marimo/save-to-container',
       '/api/marimo/notebook/:serverId',
       '/api/marimo/viewer/:serverId',
       '/api/marimo/cleanup'

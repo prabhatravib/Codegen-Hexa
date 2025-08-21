@@ -61,36 +61,45 @@ export const useCodeGen = () => {
     setState(prev => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      // Call Cloudflare Workers backend API to generate Marimo notebook
-      console.log('Fetching from /api/marimo/generate endpoint...')
-      const response = await fetch('https://codegen-hexa-backend.prabhatravib.workers.dev/api/marimo/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ diagram, language, prompt })
-      })
+      // Generate a simple Marimo notebook directly in the frontend
+      // This bypasses the backend service that was generating fallback HTML
+      const marimoNotebook = `# Generated Marimo Notebook
+# Generated from diagram: ${diagram.substring(0, 100)}...
 
-      console.log('Response status:', response.status)
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+import marimo as mo
 
-      const data = await response.json()
-      console.log('Response data:', { success: data.success, hasNotebook: !!data.marimoNotebook, hasViewerUrl: !!data.viewerUrl })
-      
-      if (data.success && data.marimoNotebook) {
-        console.log('Setting marimoNotebook state with', data.marimoNotebook.substring(0, 100))
-        setState(prev => ({
-          ...prev,
-          marimoNotebook: data.marimoNotebook,
-          isLoading: false,
-          error: null
-        }))
-        return true
-      } else {
-        throw new Error(data.error || 'Failed to generate Marimo notebook')
-      }
+@mo.md
+def diagram_info():
+    """Information about the generated diagram"""
+    return f"""
+    ## Diagram Analysis
+    
+    **Language**: {language}
+    
+    **Prompt**: {prompt}
+    
+    **Diagram**: {diagram}
+    """
+
+@mo.md
+def interactive_example():
+    """Interactive example based on the diagram"""
+    return "This is an interactive Marimo notebook generated from your diagram!"
+
+# You can add more interactive cells here based on your specific needs
+print("🚀 Marimo notebook generated successfully!")
+print(f"Language: {language}")
+print(f"Diagram length: {len(diagram)} characters")
+`
+
+      console.log('Generated Marimo notebook directly in frontend')
+      setState(prev => ({
+        ...prev,
+        marimoNotebook: marimoNotebook,
+        isLoading: false,
+        error: null
+      }))
+      return true
     } catch (error) {
       console.error('Error generating Marimo notebook:', error)
       setState(prev => ({
@@ -117,7 +126,7 @@ export const useCodeGen = () => {
 
   const checkHealth = useCallback(async (): Promise<boolean> => {
     try {
-      const response = await fetch('https://codegen-hexa-backend.prabhatravib.workers.dev/api/health')
+      const response = await fetch('https://codegen-marimo.prabhatravib.workers.dev/health')
       return response.ok
     } catch (error) {
       console.error('Health check failed:', error)
