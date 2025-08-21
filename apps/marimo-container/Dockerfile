@@ -20,8 +20,8 @@ COPY src/start_marimo.py .
 # Create notebooks directory
 RUN mkdir -p /app/notebooks
 
-# Expose Marimo port
-EXPOSE 2718
+# Expose both ports: 8000 for container server, 2718 for Marimo
+EXPOSE 8000 2718
 
-# Start Marimo server
+# Start the container server
 CMD ["python", "start_marimo.py"]

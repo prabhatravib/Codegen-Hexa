@@ -1,95 +1,84 @@
-# Marimo Container Service
+# Marimo Container
 
-This service provides a real Marimo server running on Cloudflare Containers, replacing the browser-based Pyodide execution with a full Python environment.
+This container runs a **real Marimo Python server** that can execute Python code interactively, just like `pitext_codegen` does.
 
-## Features
+## 🚀 How It Works
 
-- **Real Python Environment**: Runs actual Marimo server instead of browser-based Pyodide
-- **Persistent State**: Notebooks persist across sessions
-- **Package Installation**: Users can install Python packages dynamically
-- **WebSocket Support**: Full Marimo reactive UI capabilities
-- **Auto-scaling**: Containers auto-sleep after 5 minutes of inactivity
+1. **Container Server (Port 8000)**: A Python HTTP server that handles API requests and creates notebook files
+2. **Marimo Server (Port 2718)**: The actual Marimo server that serves interactive notebooks
+3. **Cloudflare Worker**: Stores notebooks in KV and proxies requests to the container
 
-## Architecture
+## 📁 Architecture
 
 ```
-Frontend (React) → Backend (Workers) → Marimo Container (Python)
+Cloudflare Worker (KV Storage)
+           ↓
+    Container Server (Port 8000)
+           ↓
+    Marimo Server (Port 2718)
+           ↓
+    Interactive Python Notebooks
 ```
 
-The frontend connects to the backend API, which forwards requests to the Marimo container running the actual Python server.
+## 🔧 Setup
 
-## Setup
-
-### 1. Install Dependencies
+### 1. Build and Run Container
 
 ```bash
-cd apps/marimo-container
-pnpm install
+# Build the container
+docker build -t marimo-container .
+
+# Run the container
+docker run -p 8000:8000 -p 2718:2718 marimo-container
 ```
 
-### 2. Configure Environment
-
-Set your OpenAI API key as a secret:
+### 2. Test the Container
 
 ```bash
-wrangler secret put OPENAI_API_KEY
+# Test endpoints
+python test_container.py
+
+# Or manually test:
+curl http://localhost:8000/health
+curl http://localhost:8000/
+curl "http://localhost:8000/edit?file=print('Hello World')"
 ```
 
-### 3. Build and Deploy
+## 🌐 Endpoints
 
-```bash
-# Build the service
-pnpm run build:marimo
+- `GET /health` - Health check
+- `GET /` - Container interface
+- `GET /edit?file=content` - Create and serve notebook with content
 
-# Deploy to Cloudflare
-pnpm run deploy:marimo
-```
+## 🔄 Workflow
 
-## Development
+1. **Frontend** generates Marimo notebook content
+2. **Cloudflare Worker** saves content to KV storage
+3. **Container** receives request with notebook content
+4. **Container** creates temporary `.py` file
+5. **Marimo server** serves interactive notebook from that file
+6. **User** gets real Python execution environment!
 
-```bash
-# Start development server
-pnpm run dev:marimo
+## 🎯 Key Benefits
 
-# Type checking
-pnpm run type-check
-```
+- ✅ **Real Python execution** (not fake HTML)
+- ✅ **Interactive notebooks** (like `pitext_codegen`)
+- ✅ **Persistent storage** (Cloudflare KV)
+- ✅ **Scalable** (container-based)
+- ✅ **No CDN dependencies** (everything runs locally)
 
-## API Endpoints
+## 🚨 Important Notes
 
-- `/marimo/*` - Routes to Marimo container
-- `/health` - Health check endpoint
+- This container **cannot run in Cloudflare Workers** (Workers can't run Python servers)
+- You need to deploy this container **separately** (e.g., Docker, VPS, etc.)
+- The Cloudflare Worker acts as a **proxy** to the container
+- The container provides the **actual Marimo functionality**
 
-## Container Configuration
+## 🔗 Integration
 
-- **CPU**: 1 core
-- **Memory**: 2GB
-- **Disk**: 5GB
-- **Port**: 2718
-- **Idle Timeout**: 5 minutes
+The frontend will:
+1. Save notebooks to Cloudflare KV via the Worker
+2. Get redirected to the container
+3. Receive real interactive Marimo notebooks
 
-## Integration
-
-The service integrates with the main backend through:
-
-1. **Notebook Generation**: Backend generates Marimo notebook code
-2. **Container Storage**: Notebooks are saved to the Marimo container
-3. **Frontend Display**: Frontend shows notebooks in iframe to container
-
-## Troubleshooting
-
-### Container Not Starting
-- Check Dockerfile syntax
-- Verify requirements.txt dependencies
-- Check Cloudflare Container logs
-
-### Connection Issues
-- Verify container is running
-- Check network policies
-- Ensure correct port configuration
-
-## Notes
-
-- Containers are stateless and will lose data on restart
-- Each user session can have its own container instance
-- The service automatically handles container lifecycle management
+This gives you the **exact same experience** as `pitext_codegen` - real Python execution in interactive notebooks!
