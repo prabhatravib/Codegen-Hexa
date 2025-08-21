@@ -22,7 +22,7 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
         setError(null)
         
         // Save the notebook to the Marimo container with KV storage
-        const notebookId = `notebook_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        const notebookId = `notebook_${Date.now()}_${Math.random().toString(36).substring(2, 11).replace(/[^a-z0-9]/g, '')}`
         
         const response = await fetch('https://codegen-marimo.prabhatravib.workers.dev/marimo/api/save', {
           method: 'POST',
