@@ -1,0 +1,2 @@
+marimo>=0.8
+# plus your libs, e.g. pandas, altair, etc.

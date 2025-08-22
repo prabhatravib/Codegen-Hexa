@@ -36,8 +36,8 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
         if (response.ok) {
           const data = await response.json()
           if (data.success) {
-                         // Use the working Marimo container URL with KV storage
-             const marimoUrl = `https://codegen-marimo.prabhatravib.workers.dev/marimo/notebook/${notebookId}`
+            // Use the mountId to create the proxy URL
+            const marimoUrl = `https://codegen-marimo.prabhatravib.workers.dev/marimo/notebook/${data.mountId}`
             setMarimoUrl(marimoUrl)
             setStatus('ready')
           } else {
@@ -100,7 +100,7 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
           if (response.ok) {
             const data = await response.json()
             if (data.success) {
-              const marimoUrl = `https://codegen-marimo.prabhatravib.workers.dev/marimo/notebook/${notebookId}`
+              const marimoUrl = `https://codegen-marimo.prabhatravib.workers.dev/marimo/notebook/${data.mountId}`
               setMarimoUrl(marimoUrl)
               setStatus('ready')
             } else {
