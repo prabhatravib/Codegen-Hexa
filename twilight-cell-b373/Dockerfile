@@ -28,13 +28,18 @@ RUN ls -la /app/notebooks/ && \
     cat /app/notebooks/workspace.py
 
 # Set Marimo environment variables for stability
-ENV MARIMO_SKIP_UPDATE_CHECK=true
-ENV MARIMO_LOG_LEVEL=ERROR
+ENV MARIMO_SKIP_UPDATE_CHECK=1
+ENV MARIMO_LOG_LEVEL=INFO
 
 # Expose Marimo default port
 EXPOSE 2718
 
-# Start Marimo with the specific notebook file
-# This will open the notebook directly - no directory page!
-# Using flags compatible with Marimo 0.3.12
-CMD ["python", "-m", "marimo", "edit", "--host", "0.0.0.0", "--port", "2718", "--headless", "/app/notebooks/workspace.py"]
+# Create a startup script to handle Marimo startup more robustly
+RUN echo '#!/bin/bash\n\
+echo "Starting Marimo server..."\n\
+cd /app/notebooks\n\
+python -m marimo edit --host 0.0.0.0 --port 2718 --no-token --skip-update-check workspace.py\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
+# Use the startup script instead of direct command
+CMD ["/app/start.sh"]

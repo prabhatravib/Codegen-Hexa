@@ -1,9 +1,10 @@
 [project]
-name = "<TBD>"
+name = "twilight-cell-b373"
 version = "0.1.0"
-description = "Add your description here"
+description = "Marimo notebook running on Cloudflare Containers"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.9"
 dependencies = [
+    "marimo>=0.11.0,<0.14.0",
     "webtypy>=0.1.7",
 ]

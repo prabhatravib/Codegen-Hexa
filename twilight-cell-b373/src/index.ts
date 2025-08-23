@@ -19,6 +19,11 @@ export default {
     // Get the container instance
     const container = getContainer(env.MARIMO);
     
+    // Ensure container is started
+    console.log("Starting Marimo container...");
+    await container.start();
+    console.log("Container started successfully");
+    
     // Forward ALL requests to the Marimo container
     // This ensures the notebook interface is properly served
     return container.fetch(request);

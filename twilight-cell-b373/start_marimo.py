@@ -51,10 +51,10 @@ def __():
     return notebook_path
 
 def start_marimo(notebook_path):
-    """Start Marimo with the notebook"""
+    """Start Marimo with the notebook using modern 0.11-0.13 flags"""
     print("🚀 Starting Marimo...")
     
-    # Get Marimo version to determine compatible flags
+    # Get Marimo version to confirm we're running 0.11+
     try:
         version_result = subprocess.run(
             ["python", "-m", "marimo", "--version"],
@@ -64,80 +64,52 @@ def start_marimo(notebook_path):
         )
         marimo_version = version_result.stdout.strip()
         print(f"📦 Marimo version: {marimo_version}")
+        
+        # Check if version is 0.11+
+        if marimo_version and marimo_version.startswith(('0.11', '0.12', '0.13')):
+            print("✅ Marimo version is compatible (0.11-0.13)")
+        else:
+            print("⚠️  Marimo version may not be fully compatible")
+            
     except Exception as e:
         print(f"⚠️  Could not determine Marimo version: {e}")
         marimo_version = "unknown"
     
-    # Try different flag combinations based on version
-    flag_combinations = [
-        # Try to bypass parser with --no-check flag
-        [
-            "python", "-m", "marimo", "edit",
-            "--host", "0.0.0.0",
-            "--port", "2718",
-            "--headless",
-            "--no-token",
-            "--no-check",
-            str(notebook_path)
-        ],
-        # Modern Marimo flags (0.8+)
-        [
-            "python", "-m", "marimo", "edit",
-            "--host", "0.0.0.0",
-            "--port", "2718",
-            "--headless",
-            "--no-token",
-            "--skip-update-check",
-            str(notebook_path)
-        ],
-        # Alternative modern flags
-        [
-            "python", "-m", "marimo", "edit",
-            "--host", "0.0.0.0",
-            "--port", "2718",
-            "--headless",
-            "--no-token",
-            str(notebook_path)
-        ],
-        # Legacy Marimo flags (0.3.x)
-        [
-            "python", "-m", "marimo", "edit",
-            "--host", "0.0.0.0",
-            "--port", "2718",
-            "--headless",
-            str(notebook_path)
-        ]
+    # Modern Marimo 0.11-0.13 flags
+    # Using --no-token for public access (behind your reverse proxy)
+    cmd = [
+        "python", "-m", "marimo", "edit",
+        "--host", "0.0.0.0",
+        "--port", "2718",
+        "--headless",
+        "--no-token",
+        "--skip-update-check",
+        str(notebook_path)
     ]
     
-    for i, cmd in enumerate(flag_combinations):
-        try:
-            print(f"📝 Trying command set {i+1}: {' '.join(cmd)}")
+    try:
+        print(f"📝 Starting Marimo with command: {' '.join(cmd)}")
+        
+        # Start Marimo
+        process = subprocess.Popen(cmd)
+        print(f"✅ Marimo started with PID: {process.pid}")
+        
+        # Wait to see if it starts successfully
+        time.sleep(5)
+        
+        if process.poll() is None:
+            print(f"🎉 Marimo is running successfully!")
+            return process
+        else:
+            stdout, stderr = process.communicate()
+            print(f"❌ Marimo failed to start:")
+            if stdout: print(f"STDOUT: {stdout.decode()}")
+            if stderr: print(f"STDERR: {stderr.decode()}")
+            raise RuntimeError("Marimo process exited unexpectedly")
             
-            # Start Marimo
-            process = subprocess.Popen(cmd)
-            print(f"✅ Marimo started with PID: {process.pid}")
-            
-            # Wait to see if it starts successfully
-            time.sleep(5)
-            
-            if process.poll() is None:
-                print(f"🎉 Marimo is running successfully with command set {i+1}!")
-                return process
-            else:
-                stdout, stderr = process.communicate()
-                print(f"⚠️  Command set {i+1} failed:")
-                if stdout: print(f"STDOUT: {stdout.decode()}")
-                if stderr: print(f"STDERR: {stderr.decode()}")
-                
-                # Try next combination
-                continue
-                
-        except Exception as e:
-            print(f"❌ Error with command set {i+1}: {e}")
-            continue
-    
-    # If we get here, all combinations failed
-    raise RuntimeError("Marimo failed to start with all flag combinations")
+    except Exception as e:
+        print(f"❌ Error starting Marimo: {e}")
+        raise
 
 def main():
     """Main startup function"""
