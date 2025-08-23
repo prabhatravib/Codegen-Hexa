@@ -6,7 +6,7 @@
   "durable_objects": {
     "bindings": [{ "name": "MARIMO", "class_name": "MarimoContainer" }]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MarimoContainer"] }],
+  "migrations": [],
   "containers": [
     {
       "class_name": "MarimoContainer",
