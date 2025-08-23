@@ -14,23 +14,22 @@ def main():
         notebooks_dir.mkdir(exist_ok=True)
         print(f"✅ Created notebooks directory: {notebooks_dir}")
         
-        # Create a proper Marimo notebook
-        notebook_path = notebooks_dir / "workspace.py"
-        notebook_content = '''import marimo as mo
-
-# Initialize the Marimo app
-app = mo.App()
-
-@app.cell
-def __():
-    return "Hello from Marimo!"
-
-@app.cell
-def __():
-    return 42
-'''
-        notebook_path.write_text(notebook_content)
-        print(f"✅ Created notebook: {notebook_path}")
+        # Create a unique UUID notebook
+        print("🔧 Creating unique UUID notebook...")
+        create_result = subprocess.run(["python", "src/create_uuid_notebook.py"], 
+                                     capture_output=True, text=True, cwd="/app")
+        print(f"✅ Notebook creation output: {create_result.stdout}")
+        if create_result.stderr:
+            print(f"⚠️  Notebook creation warnings: {create_result.stderr}")
+        
+        # Find the created notebook file
+        notebook_files = list(notebooks_dir.glob("*_marimo_notebook.py"))
+        if not notebook_files:
+            print("❌ No notebook files found!")
+            return 1
+        
+        notebook_path = notebook_files[0]
+        print(f"✅ Using notebook: {notebook_path}")
         
         # Test if we can run Python
         print("🧪 Testing Python execution...")
@@ -69,8 +68,8 @@ def __():
         else:
             stdout, stderr = process.communicate()
             print(f"❌ Marimo failed to start:")
-            print(f"STDOUT: {stdout.decode()}")
-            print(f"STDERR: {stderr.decode()}")
+            print(f"STDOUT: {stdout.decode() if stdout else 'None'}")
+            print(f"STDERR: {stderr.decode() if stderr else 'None'}")
             return 1
             
     except Exception as e:

@@ -20,13 +20,6 @@ COPY . /app
 # Create notebooks directory
 RUN mkdir -p /app/notebooks
 
-# Copy the main notebook file (workspace.py has numpy imports)
-COPY workspace.py /app/notebooks/workspace.py
-
-# Verify the notebook file was copied
-RUN ls -la /app/notebooks/ && \
-    cat /app/notebooks/workspace.py
-
 # Set Marimo environment variables for stability
 ENV MARIMO_SKIP_UPDATE_CHECK=1
 ENV MARIMO_LOG_LEVEL=INFO
@@ -34,11 +27,20 @@ ENV MARIMO_LOG_LEVEL=INFO
 # Expose Marimo default port
 EXPOSE 2718
 
-# Create a startup script to handle Marimo startup more robustly
+# Create a startup script that generates a unique notebook
 RUN echo '#!/bin/bash\n\
-echo "Starting Marimo server..."\n\
+echo "Starting Marimo server with unique notebook..."\n\
+cd /app\n\
+python src/create_uuid_notebook.py\n\
 cd /app/notebooks\n\
-python -m marimo edit --host 0.0.0.0 --port 2718 --no-token workspace.py\n\
+# Get the notebook name that was created\n\
+notebook_file=$(ls *_marimo_notebook.py | head -1)\n\
+if [ -z "$notebook_file" ]; then\n\
+    echo "ERROR: No notebook file found!"\n\
+    exit 1\n\
+fi\n\
+echo "Starting Marimo with notebook: $notebook_file"\n\
+python -m marimo edit --host 0.0.0.0 --port 2718 --headless --no-token "$notebook_file"\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
 # Use the startup script instead of direct command

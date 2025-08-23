@@ -19,9 +19,13 @@ def create_uuid_notebook():
     # Notebook content
     content = f'''import marimo as mo
 
+# Initialize the Marimo app
+app = mo.App()
+
 @app.cell
 def __():
     """Welcome to Marimo Notebook {notebook_id}! 🚀"""
+    import marimo as mo
     mo.md(f"""
     # Marimo Notebook {notebook_id} 🚀
     
@@ -49,41 +53,14 @@ def __():
 def __():
     """Display the slider value"""
     slider_value = slider.value
-    mo.md(f"**Slider value:** {slider_value}")
+    mo.md(f"**Slider value:** {{slider_value}}")
     return slider_value
 '''
     
     # Write the notebook
     notebook_path.write_text(content)
     
-    # Also create a symlink or redirect file for easy access
-    redirect_path = notebooks_dir / "current_notebook.py"
-    if redirect_path.exists():
-        redirect_path.unlink()
-    
-    # Create a simple redirect file
-    redirect_content = f'''# Redirect to current notebook
-# Current notebook: {notebook_name}
-# Access directly at: /{notebook_name}
-
-import marimo as mo
-
-@app.cell
-def __():
-    mo.md(f"""
-    # Current Notebook: {notebook_name}
-    
-    This is a redirect. The actual notebook is at: **/{notebook_name}**
-    
-    [Click here to go to the notebook](/{notebook_name})
-    """)
-    return "Redirect to main notebook"
-'''
-    
-    redirect_path.write_text(redirect_content)
-    
     print(f"✅ Created notebook: {notebook_name}")
-    print(f"✅ Created redirect: current_notebook.py")
     print(f"🌐 Access directly at: /{notebook_name}")
     
     return notebook_name
