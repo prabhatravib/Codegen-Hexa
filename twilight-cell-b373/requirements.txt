@@ -1,3 +1,2 @@
-marimo>=0.8.0
-pandas
-numpy
+marimo>=0.8
+# plus your libs, e.g. pandas, altair, etc.

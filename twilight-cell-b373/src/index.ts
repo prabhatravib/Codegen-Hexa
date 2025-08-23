@@ -7,13 +7,6 @@ export class MarimoContainer extends Container {
   sleepAfter = "2h";
 }
 
-export class MarimoContainerV2 extends Container {
-  // Worker will wait until this port is listening
-  defaultPort = 2718; // Marimo default
-  // Optional: keep warm window for idle editing
-  sleepAfter = "2h";
-}
-
 export default {
   async fetch(request: Request, env: any) {
     // Get the container instance
