@@ -9,7 +9,12 @@ export class MarimoContainer extends Container {
 
 export default {
   async fetch(request: Request, env: any) {
-    // Forward HTTP and WebSocket to the container
-    return getContainer(env.MARIMO).fetch(request);
+    // Get the container instance
+    const container = getContainer(env.MARIMO);
+    
+    // Forward ALL requests to the Marimo container
+    // This ensures the notebook interface is properly served
+    return container.fetch(request);
   },
 };
+
