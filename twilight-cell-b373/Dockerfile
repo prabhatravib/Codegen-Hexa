@@ -20,23 +20,21 @@ COPY . /app
 # Create notebooks directory
 RUN mkdir -p /app/notebooks
 
-# Create a simple notebook file using echo (simpler than cat)
-RUN echo 'import marimo as mo' > /app/notebooks/d6367d62_notebook.py && \
-    echo '' >> /app/notebooks/d6367d62_notebook.py && \
-    echo '# Initialize the Marimo app' >> /app/notebooks/d6367d62_notebook.py && \
-    echo 'app = mo.App()' >> /app/notebooks/d6367d62_notebook.py && \
-    echo '' >> /app/notebooks/d6367d62_notebook.py && \
-    echo '@app.cell' >> /app/notebooks/d6367d62_notebook.py && \
-    echo 'def __():' >> /app/notebooks/d6367d62_notebook.py && \
-    echo '    return "Hello from Marimo!"' >> /app/notebooks/d6367d62_notebook.py && \
-    echo '' >> /app/notebooks/d6367d62_notebook.py && \
-    echo '@app.cell' >> /app/notebooks/d6367d62_notebook.py && \
-    echo 'def __():' >> /app/notebooks/d6367d62_notebook.py && \
-    echo '    return 42' >> /app/notebooks/d6367d62_notebook.py
+# Copy the pre-made notebook file
+COPY minimal_notebook.py /app/notebooks/workspace.py
+
+# Verify the notebook file was copied
+RUN ls -la /app/notebooks/ && \
+    cat /app/notebooks/workspace.py
+
+# Set Marimo environment variables for stability
+ENV MARIMO_SKIP_UPDATE_CHECK=true
+ENV MARIMO_LOG_LEVEL=ERROR
 
 # Expose Marimo default port
 EXPOSE 2718
 
-# Start Marimo with the directory to get it stable
-# This will show the directory page, but at least the container will run
-CMD ["python", "-m", "marimo", "edit", "--host", "0.0.0.0", "--port", "2718", "--headless", "--no-token", "/app/notebooks"]
+# Start Marimo with the specific notebook file
+# This will open the notebook directly - no directory page!
+# Using flags compatible with Marimo 0.3.12
+CMD ["python", "-m", "marimo", "edit", "--host", "0.0.0.0", "--port", "2718", "--headless", "/app/notebooks/workspace.py"]

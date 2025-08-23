@@ -6,15 +6,13 @@ app = mo.App()
 @app.cell
 def __():
     """Welcome to Marimo Notebook!"""
-    mo.md(f"""
-    # Marimo Notebook d6367d62
+    mo.md("""
+    # Marimo Notebook 🚀
     
     This notebook is running on Cloudflare Containers.
-    Each session gets a unique notebook ID for isolation.
-    
-    **Notebook ID:** d6367d62
+    Each session gets a clean workspace for coding.
     """)
-    return f"Notebook d6367d62 is ready!"
+    return "Notebook is ready!"
 
 @app.cell
 def __():
