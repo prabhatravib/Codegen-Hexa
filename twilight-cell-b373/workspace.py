@@ -5,6 +5,10 @@ app = mo.App()
 
 @app.cell
 def __():
+    import marimo as mo
+
+@app.cell
+def __():
     """Welcome to Marimo Notebook!"""
     mo.md("""
     # Marimo Notebook 🚀
@@ -30,5 +34,6 @@ def __():
 @app.cell
 def __():
     """Display the slider value"""
-    # Get the current slider value from the previous cell
-    return "Slider is ready! Use the slider above to interact."
+    slider_value = slider.value
+    mo.md(f"**Slider value:** {slider_value}")
+    return slider_value
