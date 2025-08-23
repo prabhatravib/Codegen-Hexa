@@ -1,40 +1,33 @@
 # syntax=docker/dockerfile:1.4
 FROM python:3.11-slim
 
-# Fast, reproducible installs with uv (optional but good)
-# COPY --from=ghcr.io/astral-sh/uv:0.4.20 /uv /bin/uv
-# ENV UV_SYSTEM_PYTHON=1
+# Set working directory
 WORKDIR /app
 
-# System deps - keep minimal
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential && rm -rf /var/lib/apt/lists/*
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# App files
-COPY requirements.txt /app/requirements.txt
+# Copy requirements first for better caching
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the startup script and other code
-COPY . /app
+# Copy all source files
+COPY . .
 
 # Create notebooks directory
 RUN mkdir -p /app/notebooks
 
-# Copy the pre-made notebook file
-COPY minimal_notebook.py /app/notebooks/workspace.py
+# Make startup script executable
+RUN chmod +x start_marimo.py
 
-# Verify the notebook file was copied
-RUN ls -la /app/notebooks/ && \
-    cat /app/notebooks/workspace.py
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 
-# Set Marimo environment variables for stability
-ENV MARIMO_SKIP_UPDATE_CHECK=true
-ENV MARIMO_LOG_LEVEL=ERROR
-
-# Expose Marimo default port
+# Expose Marimo port
 EXPOSE 2718
 
-# Start Marimo with the specific notebook file
-# This will open the notebook directly - no directory page!
-# Using flags compatible with Marimo 0.3.12
-CMD ["python", "-m", "marimo", "edit", "--host", "0.0.0.0", "--port", "2718", "--headless", "/app/notebooks/workspace.py"]
+# Use ENTRYPOINT to ensure startup script runs
+ENTRYPOINT ["python", "test_simple.py"]

@@ -4,12 +4,15 @@
   "compatibility_date": "2025-08-22",
   "observability": { "enabled": true },
   "durable_objects": {
-    "bindings": [{ "name": "MARIMO", "class_name": "MarimoContainer" }]
+    "bindings": [{ "name": "MARIMO", "class_name": "MarimoContainerV2" }]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MarimoContainer"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["MarimoContainer"] },
+    { "tag": "v3", "new_sqlite_classes": ["MarimoContainerV2"] }
+  ],
   "containers": [
     {
-      "class_name": "MarimoContainer",
+      "class_name": "MarimoContainerV2",
       "image": "./Dockerfile",
       "max_instances": 10
     }
