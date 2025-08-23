@@ -20,8 +20,8 @@ COPY . /app
 # Create notebooks directory
 RUN mkdir -p /app/notebooks
 
-# Copy the pre-made notebook file
-COPY minimal_notebook.py /app/notebooks/workspace.py
+# Copy the main notebook file (workspace.py has numpy imports)
+COPY workspace.py /app/notebooks/workspace.py
 
 # Verify the notebook file was copied
 RUN ls -la /app/notebooks/ && \
@@ -29,7 +29,7 @@ RUN ls -la /app/notebooks/ && \
 
 # Set Marimo environment variables for stability
 ENV MARIMO_SKIP_UPDATE_CHECK=1
-ENV MARIMO_LOG_LEVEL=INFO
+ENV MARIMO_LOG_LEVEL=DEBUG
 
 # Expose Marimo default port
 EXPOSE 2718
@@ -37,8 +37,14 @@ EXPOSE 2718
 # Create a startup script to handle Marimo startup more robustly
 RUN echo '#!/bin/bash\n\
 echo "Starting Marimo server..."\n\
+echo "Python version: $(python --version)"\n\
+echo "Marimo version: $(python -c \"import marimo; print(marimo.__version__)\")"\n\
+echo "Current directory: $(pwd)"\n\
+echo "Files in notebooks: $(ls -la)"\n\
 cd /app/notebooks\n\
-python -m marimo edit --host 0.0.0.0 --port 2718 --no-token --skip-update-check workspace.py\n\
+echo "Changed to notebooks directory: $(pwd)"\n\
+echo "Attempting to start Marimo..."\n\
+python -m marimo run --host 0.0.0.0 --port 2718 --no-token workspace.py 2>&1\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
 # Use the startup script instead of direct command

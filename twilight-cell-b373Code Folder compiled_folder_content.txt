@@ -66,7 +66,7 @@ jspm_packages/
 --- End of C:\Users\prabh\OneDrive\Documents\GitHub\codegen-hexa\twilight-cell-b373\.gitignore ---
 
 C:\Users\prabh\OneDrive\Documents\GitHub\codegen-hexa\twilight-cell-b373\.python-version:
-3.12
+3.11
 --- End of C:\Users\prabh\OneDrive\Documents\GitHub\codegen-hexa\twilight-cell-b373\.python-version ---
 
 C:\Users\prabh\OneDrive\Documents\GitHub\codegen-hexa\twilight-cell-b373\create_notebook.py:
@@ -148,16 +148,21 @@ RUN ls -la /app/notebooks/ && \
     cat /app/notebooks/workspace.py
 
 # Set Marimo environment variables for stability
-ENV MARIMO_SKIP_UPDATE_CHECK=true
-ENV MARIMO_LOG_LEVEL=ERROR
+ENV MARIMO_SKIP_UPDATE_CHECK=1
+ENV MARIMO_LOG_LEVEL=INFO
 
 # Expose Marimo default port
 EXPOSE 2718
 
-# Start Marimo with the specific notebook file
-# This will open the notebook directly - no directory page!
-# Using flags compatible with Marimo 0.3.12
-CMD ["python", "-m", "marimo", "edit", "--host", "0.0.0.0", "--port", "2718", "--headless", "/app/notebooks/workspace.py"]
+# Create a startup script to handle Marimo startup more robustly
+RUN echo '#!/bin/bash\n\
+echo "Starting Marimo server..."\n\
+cd /app/notebooks\n\
+python -m marimo edit --host 0.0.0.0 --port 2718 --no-token --skip-update-check workspace.py\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
+# Use the startup script instead of direct command
+CMD ["/app/start.sh"]
 
 --- End of C:\Users\prabh\OneDrive\Documents\GitHub\codegen-hexa\twilight-cell-b373\Dockerfile ---
 
@@ -186,6 +191,9 @@ def generate_uuid_notebook():
     
     # Notebook content (without emojis to avoid encoding issues)
     content = f'''import marimo as mo
+
+# Initialize the Marimo app
+app = mo.App()
 
 @app.cell
 def __():
@@ -233,8 +241,8 @@ def __():
             dockerfile_content = f.read()
         
         # Replace the notebook path in the CMD line
-        old_cmd = 'CMD ["python", "-m", "marimo", "edit", "--host", "0.0.0.0", "--port", "2718", "--headless", "--no-token", "/app/notebooks/a1b2c3d4_marimo_notebook.py"]'
-        new_cmd = f'CMD ["python", "-m", "marimo", "edit", "--host", "0.0.0.0", "--port", "2718", "--headless", "--no-token", "/app/notebooks/{notebook_name}"]'
+        old_cmd = 'CMD ["python", "-m", "marimo", "edit", "--host", "0.0.0.0", "--port", "2718", "--headless", "--no-token", "--skip-update-check", "/app/notebooks/a1b2c3d4_marimo_notebook.py"]'
+        new_cmd = f'CMD ["python", "-m", "marimo", "edit", "--host", "0.0.0.0", "--port", "2718", "--headless", "--no-token", "--skip-update-check", "/app/notebooks/{notebook_name}"]'
         
         dockerfile_content = dockerfile_content.replace(old_cmd, new_cmd)
         
@@ -1989,12 +1997,13 @@ C:\Users\prabh\OneDrive\Documents\GitHub\codegen-hexa\twilight-cell-b373\package
 
 C:\Users\prabh\OneDrive\Documents\GitHub\codegen-hexa\twilight-cell-b373\pyproject.toml:
 [project]
-name = "<TBD>"
+name = "twilight-cell-b373"
 version = "0.1.0"
-description = "Add your description here"
+description = "Marimo notebook running on Cloudflare Containers"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.9"
 dependencies = [
+    "marimo>=0.11.0,<0.14.0",
     "webtypy>=0.1.7",
 ]
 
@@ -2028,7 +2037,7 @@ autocomplete and type information in your editor.
 --- End of C:\Users\prabh\OneDrive\Documents\GitHub\codegen-hexa\twilight-cell-b373\README.md ---
 
 C:\Users\prabh\OneDrive\Documents\GitHub\codegen-hexa\twilight-cell-b373\requirements.txt:
-marimo>=0.3.0,<0.4.0
+marimo==0.12.0
 # plus your libs, e.g. pandas, altair, etc.
 
 --- End of C:\Users\prabh\OneDrive\Documents\GitHub\codegen-hexa\twilight-cell-b373\requirements.txt ---
@@ -2087,10 +2096,10 @@ def __():
     return notebook_path
 
 def start_marimo(notebook_path):
-    """Start Marimo with the notebook"""
+    """Start Marimo with the notebook using modern 0.11-0.13 flags"""
     print("🚀 Starting Marimo...")
     
-    # Get Marimo version to determine compatible flags
+    # Get Marimo version to confirm we're running 0.11+
     try:
         version_result = subprocess.run(
             ["python", "-m", "marimo", "--version"],
@@ -2100,80 +2109,52 @@ def start_marimo(notebook_path):
         )
         marimo_version = version_result.stdout.strip()
         print(f"📦 Marimo version: {marimo_version}")
+        
+        # Check if version is 0.11+
+        if marimo_version and marimo_version.startswith(('0.11', '0.12', '0.13')):
+            print("✅ Marimo version is compatible (0.11-0.13)")
+        else:
+            print("⚠️  Marimo version may not be fully compatible")
+            
     except Exception as e:
         print(f"⚠️  Could not determine Marimo version: {e}")
         marimo_version = "unknown"
     
-    # Try different flag combinations based on version
-    flag_combinations = [
-        # Try to bypass parser with --no-check flag
-        [
-            "python", "-m", "marimo", "edit",
-            "--host", "0.0.0.0",
-            "--port", "2718",
-            "--headless",
-            "--no-token",
-            "--no-check",
-            str(notebook_path)
-        ],
-        # Modern Marimo flags (0.8+)
-        [
-            "python", "-m", "marimo", "edit",
-            "--host", "0.0.0.0",
-            "--port", "2718",
-            "--headless",
-            "--no-token",
-            "--skip-update-check",
-            str(notebook_path)
-        ],
-        # Alternative modern flags
-        [
-            "python", "-m", "marimo", "edit",
-            "--host", "0.0.0.0",
-            "--port", "2718",
-            "--headless",
-            "--no-token",
-            str(notebook_path)
-        ],
-        # Legacy Marimo flags (0.3.x)
-        [
-            "python", "-m", "marimo", "edit",
-            "--host", "0.0.0.0",
-            "--port", "2718",
-            "--headless",
-            str(notebook_path)
-        ]
+    # Modern Marimo 0.11-0.13 flags
+    # Using --no-token for public access (behind your reverse proxy)
+    cmd = [
+        "python", "-m", "marimo", "edit",
+        "--host", "0.0.0.0",
+        "--port", "2718",
+        "--headless",
+        "--no-token",
+        "--skip-update-check",
+        str(notebook_path)
     ]
     
-    for i, cmd in enumerate(flag_combinations):
-        try:
-            print(f"📝 Trying command set {i+1}: {' '.join(cmd)}")
+    try:
+        print(f"📝 Starting Marimo with command: {' '.join(cmd)}")
+        
+        # Start Marimo
+        process = subprocess.Popen(cmd)
+        print(f"✅ Marimo started with PID: {process.pid}")
+        
+        # Wait to see if it starts successfully
+        time.sleep(5)
+        
+        if process.poll() is None:
+            print(f"🎉 Marimo is running successfully!")
+            return process
+        else:
+            stdout, stderr = process.communicate()
+            print(f"❌ Marimo failed to start:")
+            if stdout: print(f"STDOUT: {stdout.decode()}")
+            if stderr: print(f"STDERR: {stderr.decode()}")
+            raise RuntimeError("Marimo process exited unexpectedly")
             
-            # Start Marimo
-            process = subprocess.Popen(cmd)
-            print(f"✅ Marimo started with PID: {process.pid}")
-            
-            # Wait to see if it starts successfully
-            time.sleep(5)
-            
-            if process.poll() is None:
-                print(f"🎉 Marimo is running successfully with command set {i+1}!")
-                return process
-            else:
-                stdout, stderr = process.communicate()
-                print(f"⚠️  Command set {i+1} failed:")
-                if stdout: print(f"STDOUT: {stdout.decode()}")
-                if stderr: print(f"STDERR: {stderr.decode()}")
-                
-                # Try next combination
-                continue
-                
-        except Exception as e:
-            print(f"❌ Error with command set {i+1}: {e}")
-            continue
-    
-    # If we get here, all combinations failed
-    raise RuntimeError("Marimo failed to start with all flag combinations")
+    except Exception as e:
+        print(f"❌ Error starting Marimo: {e}")
+        raise
 
 def main():
     """Main startup function"""
@@ -2420,7 +2401,14 @@ C:\Users\prabh\OneDrive\Documents\GitHub\codegen-hexa\twilight-cell-b373\wrangle
   "durable_objects": {
     "bindings": [{ "name": "MARIMO", "class_name": "MarimoContainer" }]
   },
-  "migrations": [],
+  "migrations": [
+    {
+      "tag": "v3",
+      "new_classes": [
+        "MarimoContainer"
+      ]
+    }
+  ],
   "containers": [
     {
       "class_name": "MarimoContainer",
@@ -4631,6 +4619,11 @@ export default {
   async fetch(request: Request, env: any) {
     // Get the container instance
     const container = getContainer(env.MARIMO);
+    
+    // Ensure container is started
+    console.log("Starting Marimo container...");
+    await container.start();
+    console.log("Container started successfully");
     
     // Forward ALL requests to the Marimo container
     // This ensures the notebook interface is properly served
