@@ -29,6 +29,7 @@ app = mo.App()
 @app.cell
 def __():
     """Welcome to Marimo Notebook!"""
+    import marimo as mo
     mo.md(f"""
     # Marimo Notebook {notebook_id}
     

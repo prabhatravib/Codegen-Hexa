@@ -25,6 +25,7 @@ app = mo.App()
 @app.cell
 def __():
     """Welcome to Marimo Notebook {notebook_id}! 🚀"""
+    import marimo as mo
     mo.md(f"""
     # Marimo Notebook {notebook_id} 🚀
     
@@ -65,5 +66,4 @@ def __():
     return notebook_name
 
 if __name__ == "__main__":
-    notebook_name = create_uuid_notebook()
-    print(f"🎉 Successfully created notebook: {notebook_name}")
+    create_uuid_notebook()
