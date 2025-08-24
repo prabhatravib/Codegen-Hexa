@@ -2,16 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Marimo Notebook - Redirecting...</title>
     <style>
-        html, body {
-            width: 100vw;
-            max-width: none;
-            margin: 0;
-            padding: 0;
-        }
-        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -21,8 +14,6 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            width: 100vw;
-            max-width: none;
             color: white;
         }
         .container {
@@ -32,8 +23,6 @@
             border-radius: 1rem;
             backdrop-filter: blur(10px);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            width: 100vw;
-            max-width: none;
         }
         .spinner {
             border: 3px solid rgba(255, 255, 255, 0.3);
@@ -79,12 +68,6 @@
     </div>
 
     <script>
-        // Ensure full width viewport
-        document.documentElement.style.width = '100vw';
-        document.documentElement.style.maxWidth = 'none';
-        document.body.style.width = '100vw';
-        document.body.style.maxWidth = 'none';
-        
         // Redirect to the root path so Marimo can handle routing
         const notebookUrl = '/';
         

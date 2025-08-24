@@ -21,28 +21,6 @@ export class MarimoContainerV2 extends Container {
 
 export default {
   async fetch(request: Request, env: any) {
-    const url = new URL(request.url);
-    
-    // Handle WebSocket upgrade requests specifically
-    if (url.pathname.startsWith('/ws')) {
-      console.log('Handling WebSocket upgrade request:', url.pathname);
-      
-      // Get the container instance
-      const container = getContainer(env.MARIMO);
-      await container.start();
-      
-      // Simply forward the WebSocket request to the container
-      // Let the container handle the WebSocket upgrade
-      try {
-        const response = await container.fetch(request);
-        console.log('WebSocket request forwarded to container, status:', response.status);
-        return response;
-      } catch (error) {
-        console.error('Error forwarding WebSocket to container:', error);
-        return new Response('WebSocket connection failed', { status: 500 });
-      }
-    }
-
     // Handle CORS preflight requests
     if (request.method === 'OPTIONS') {
       return new Response(null, {
@@ -56,7 +34,31 @@ export default {
       });
     }
 
+    // Handle WebSocket upgrade requests
+    if (request.headers.get('Upgrade') === 'websocket') {
+      console.log('Handling WebSocket upgrade request');
+      
+      // Get the container instance
+      const container = getContainer(env.MARIMO);
+      await container.start();
+      
+      // Forward WebSocket request to container and return the response directly
+      try {
+        const response = await container.fetch(request);
+        
+        // For WebSocket upgrades, we need to preserve the original response exactly
+        // Don't try to recreate it, just return it as-is
+        console.log('WebSocket upgrade successful, status:', response.status);
+        return response;
+        
+      } catch (error) {
+        console.error('WebSocket upgrade error:', error);
+        return new Response('WebSocket upgrade failed', { status: 500 });
+      }
+    }
+
     // Handle API endpoints before forwarding to Marimo
+    const url = new URL(request.url);
     
     if (url.pathname === '/api/save' && request.method === 'POST') {
       try {
@@ -164,11 +166,9 @@ export default {
         }
         
         html, body {
-            height: 100vh;
-            width: 100vw;
+            height: 100%;
+            width: 100%;
             overflow: hidden;
-            margin: 0;
-            padding: 0;
         }
         
         body { 
@@ -177,19 +177,15 @@ export default {
             color: white;
             display: flex;
             flex-direction: column;
-            width: 100vw;
-            max-width: none;
         }
         
         .marimo-container {
             flex: 1;
             display: flex;
             flex-direction: column;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
             overflow: hidden;
-            margin: 0;
-            padding: 0;
         }
         
         .marimo-header {
@@ -197,7 +193,6 @@ export default {
             background: rgba(156, 39, 176, 0.1);
             border-bottom: 1px solid rgba(255,255,255,.2);
             flex-shrink: 0;
-            width: 100%;
         }
         
         .marimo-header h3 {
@@ -221,14 +216,13 @@ export default {
             font-size: 0.875rem;
             text-align: center;
             flex-shrink: 0;
-            width: 100%;
         }
         
         .marimo-iframe-wrapper {
             flex: 1;
             position: relative;
             overflow: hidden;
-            width: 100vw;
+            width: 100%;
             min-height: 0; /* Important for flexbox */
         }
         
@@ -236,11 +230,10 @@ export default {
             position: absolute;
             top: 0;
             left: 0;
-            width: 100vw;
+            width: 100%;
             height: 100%;
             border: none;
             background: #fff;
-            max-width: none;
         }
         
         .external-link {
@@ -259,24 +252,6 @@ export default {
         .external-link:hover {
             background: rgba(156, 39, 176, 0.3);
             transform: translateY(-1px);
-        }
-        
-        /* Ensure Marimo fills the full width */
-        .marimo-iframe-wrapper iframe {
-            width: 100vw !important;
-            max-width: none !important;
-            min-width: 100vw !important;
-        }
-        
-        /* Override any Marimo internal width constraints */
-        * {
-            box-sizing: border-box;
-        }
-        
-        /* Force full viewport width */
-        html, body, .marimo-container, .marimo-iframe-wrapper, .marimo-iframe-wrapper iframe {
-            width: 100vw !important;
-            max-width: none !important;
         }
     </style>
 </head>
@@ -320,168 +295,36 @@ export default {
     
     // Forward ALL requests to the Marimo container
     // This ensures the notebook interface is properly served
-    const response = await container.fetch(request);
-    
-    // Add CORS headers to all responses from the container
-    const newHeaders = new Headers(response.headers);
-    newHeaders.set('Access-Control-Allow-Origin', 'https://codegen-hexa.prabhatravib.workers.dev');
-    newHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    newHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    
-          // If this is an HTML response, inject CSS to ensure full width
-      let responseBody = response.body;
-      if (response.headers.get('content-type')?.includes('text/html')) {
-        const html = await response.text();
-        
-        // Inject JavaScript that will run AFTER Marimo loads to override its CSS
-        const fullWidthJS = `
-          <script>
-            // Function to force full width by overriding Marimo's CSS
-            function forceFullWidth() {
-              // Remove any existing width-override styles
-              const existingStyle = document.getElementById('marimo-width-override');
-              if (existingStyle) {
-                existingStyle.remove();
-              }
-              
-              // Create new style element with higher specificity
-              const style = document.createElement('style');
-              style.id = 'marimo-width-override';
-              style.textContent = \`
-                /* Override ALL width constraints with maximum specificity */
-                html, body, 
-                html *, body *,
-                div, div *,
-                .marimo-app, .marimo-app *,
-                .marimo-container, .marimo-container *,
-                .marimo-interface, .marimo-interface *,
-                .marimo-root, .marimo-root *,
-                .marimo-main, .marimo-main *,
-                .marimo-content, .marimo-content *,
-                .marimo-workspace, .marimo-workspace *,
-                .marimo-editor, .marimo-editor *,
-                .marimo-viewport, .marimo-viewport *,
-                .marimo-window, .marimo-window *,
-                .marimo-panel, .marimo-panel *,
-                .marimo-layout, .marimo-layout *,
-                .marimo-flex, .marimo-flex *,
-                .marimo-grid, .marimo-grid *,
-                #marimo-app, #marimo-app *,
-                #marimo-root, #marimo-root *,
-                #marimo-container, #marimo-container * {
-                  max-width: none !important;
-                  min-width: none !important;
-                  width: auto !important;
-                }
-                
-                /* Force main containers to full viewport width */
-                body, .marimo-app, .marimo-container, .marimo-interface, .marimo-root,
-                .marimo-main, .marimo-content, .marimo-workspace, .marimo-editor,
-                .marimo-viewport, .marimo-window, .marimo-panel, .marimo-layout {
-                  width: 100vw !important;
-                  max-width: none !important;
-                  min-width: 100vw !important;
-                  margin: 0 !important;
-                  padding: 0 !important;
-                }
-                
-                /* Override any flexbox or grid constraints */
-                .marimo-layout, .marimo-flex, .marimo-grid,
-                [class*="marimo"], [id*="marimo"] {
-                  width: 100vw !important;
-                  max-width: none !important;
-                  min-width: 100vw !important;
-                }
-                
-                /* Ensure viewport is full width */
-                html, body {
-                  width: 100vw !important;
-                  max-width: none !important;
-                  min-width: 100vw !important;
-                  margin: 0 !important;
-                  padding: 0 !important;
-                  overflow-x: hidden !important;
-                }
-              \`;
-              
-              // Insert the style at the end of head to ensure it has highest priority
-              document.head.appendChild(style);
-              
-              // Also set inline styles on all Marimo-related elements
-              const marimoSelectors = [
-                '.marimo-app', '.marimo-container', '.marimo-interface', '.marimo-root',
-                '.marimo-main', '.marimo-content', '.marimo-workspace', '.marimo-editor',
-                '.marimo-viewport', '.marimo-window', '.marimo-panel', '.marimo-layout',
-                '.marimo-flex', '.marimo-grid', '#marimo-app', '#marimo-root', '#marimo-container'
-              ];
-              
-              marimoSelectors.forEach(selector => {
-                const elements = document.querySelectorAll(selector);
-                elements.forEach(el => {
-                  el.style.setProperty('width', '100vw', 'important');
-                  el.style.setProperty('max-width', 'none', 'important');
-                  el.style.setProperty('min-width', '100vw', 'important');
-                  el.style.setProperty('margin', '0', 'important');
-                  el.style.setProperty('padding', '0', 'important');
-                });
-              });
-              
-              // Find any elements with width constraints and override them
-              const allElements = document.querySelectorAll('*');
-              allElements.forEach(el => {
-                const computedStyle = window.getComputedStyle(el);
-                if (computedStyle.maxWidth !== 'none' && computedStyle.maxWidth !== '') {
-                  el.style.setProperty('max-width', 'none', 'important');
-                }
-              });
-            }
-            
-            // Run immediately when script loads
-            forceFullWidth();
-            
-            // Run after short delays to catch elements that load later
-            setTimeout(forceFullWidth, 50);
-            setTimeout(forceFullWidth, 200);
-            setTimeout(forceFullWidth, 500);
-            setTimeout(forceFullWidth, 1000);
-            setTimeout(forceFullWidth, 2000);
-            
-            // Run on any DOM changes to catch dynamically added elements
-            const observer = new MutationObserver((mutations) => {
-              mutations.forEach((mutation) => {
-                if (mutation.type === 'childList' || mutation.type === 'attributes') {
-                  forceFullWidth();
-                }
-              });
-            });
-            
-            // Start observing after a short delay
-            setTimeout(() => {
-              observer.observe(document.body, { 
-                childList: true, 
-                subtree: true, 
-                attributes: true,
-                attributeFilter: ['style', 'class']
-              });
-            }, 100);
-            
-            // Also run on window resize and load events
-            window.addEventListener('resize', forceFullWidth);
-            window.addEventListener('load', forceFullWidth);
-            document.addEventListener('DOMContentLoaded', forceFullWidth);
-          </script>
-        `;
-        
-        // Insert JavaScript before closing body tag to ensure it runs after Marimo loads
-        const finalHtml = html.replace('</body>', `${fullWidthJS}</body>`);
-        responseBody = finalHtml;
+    try {
+      const response = await container.fetch(request);
+      
+      // Check if this is a WebSocket response (status 101 or has Upgrade header)
+      if (response.status === 101 || response.headers.get('Upgrade') === 'websocket') {
+        console.log('WebSocket response detected, returning as-is');
+        return response;
       }
-    
-    return new Response(responseBody, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: newHeaders
-    });
+      
+      // Ensure the response has a valid status code for non-WebSocket responses
+      if (response.status < 200 || response.status > 599) {
+        console.error('Invalid response status from container:', response.status);
+        return new Response('Invalid response from container', { status: 500 });
+      }
+      
+      // Add CORS headers to all responses from the container
+      const newHeaders = new Headers(response.headers);
+      newHeaders.set('Access-Control-Allow-Origin', 'https://codegen-hexa.prabhatravib.workers.dev');
+      newHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      newHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders
+      });
+    } catch (error) {
+      console.error('Error forwarding request to container:', error);
+      return new Response('Container error', { status: 500 });
+    }
   },
 };
 

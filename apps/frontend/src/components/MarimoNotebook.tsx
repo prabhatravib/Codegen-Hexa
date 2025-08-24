@@ -126,7 +126,8 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto mb-4"></div>
-          <p className="text-white">Creating Marimo Notebook...</p>
+          <p className="text-white">Saving to Marimo Container...</p>
+          <p className="text-sm text-gray-400 mt-2">This will give you the real interactive interface</p>
         </div>
       </div>
     )
@@ -162,7 +163,7 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
         {status === 'loading' && (
           <div className="flex items-center gap-2 text-yellow-400">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-400"></div>
-            <span>Creating Marimo notebook...</span>
+            <span>Saving to Marimo container...</span>
           </div>
         )}
         {status === 'ready' && (

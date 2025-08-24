@@ -49,7 +49,6 @@ def main():
             "--port", "2718",
             "--headless",
             "--no-token",
-            "--port", "2718",
             str(notebook_path)
         ]
         

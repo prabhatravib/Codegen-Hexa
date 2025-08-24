@@ -3,7 +3,7 @@ hexa/
 pitext_codegen/
 src/
 twilight-cell-b373/
-dont-use-marimo-container/
+
 # Exclude development files
 *.log
 .env*
