@@ -61,36 +61,32 @@ export const useCodeGen = () => {
     setState(prev => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      // Generate a simple Marimo notebook directly in the frontend
-      // This bypasses the backend service that was generating fallback HTML
-      const marimoNotebook = `# Generated Marimo Notebook
-# Generated from diagram: ${diagram.substring(0, 100)}...
+      // Generate Marimo notebook by calling the backend
+      const marimoResponse = await fetch('/codegen/launch-marimo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          diagram_mermaid: diagram,
+          language
+        })
+      });
 
-import marimo as mo
+      if (!marimoResponse.ok) {
+        throw new Error(`Failed to generate Marimo notebook: ${marimoResponse.statusText}`);
+      }
 
-@mo.md
-def diagram_info():
-    """Information about the generated diagram"""
-    return f"""
-    ## Diagram Analysis
-    
-    **Language**: {language}
-    
-    **Prompt**: {prompt}
-    
-    **Diagram**: {diagram}
-    """
+      const marimoData = await marimoResponse.json();
+      
+      if (!marimoData.success) {
+        throw new Error('Backend failed to generate Marimo notebook');
+      }
 
-@mo.md
-def interactive_example():
-    """Interactive example based on the diagram"""
-    return "This is an interactive Marimo notebook generated from your diagram!"
-
-# You can add more interactive cells here based on your specific needs
-print("🚀 Marimo notebook generated successfully!")
-print(f"Language: {language}")
-print(f"Diagram length: {len(diagram)} characters")
-`
+      // The backend returns a URL to the mounted Marimo notebook
+      const marimoUrl = marimoData.url;
+      const marimoNotebook = marimoUrl; // This will be the URL to the real notebook
 
       console.log('Generated Marimo notebook directly in frontend')
       setState(prev => ({

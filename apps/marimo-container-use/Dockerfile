@@ -1,31 +1,40 @@
 # syntax=docker/dockerfile:1.4
 FROM python:3.11-slim
 
-# Fast, reproducible installs with uv (optional but good)
-# COPY --from=ghcr.io/astral-sh/uv:0.4.20 /uv /bin/uv
-# ENV UV_SYSTEM_PYTHON=1
 WORKDIR /app
 
-# System deps - keep minimal
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential && rm -rf /var/lib/apt/lists/*
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# App files
-COPY requirements.txt /app/requirements.txt
+# Install Python packages
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the startup script and other code
-COPY . /app
+# Copy application files
+COPY . /app/
 
 # Create notebooks directory
 RUN mkdir -p /app/notebooks
 
-# Set Marimo environment variables for stability
+# Create a default notebook
+RUN echo 'import marimo as mo\n\
+\n\
+app = mo.App()\n\
+\n\
+@app.cell\n\
+def __():\n\
+    return "Hello from Marimo!"\n' > /app/notebooks/default.py
+
+# Environment variables
 ENV MARIMO_SKIP_UPDATE_CHECK=1
 ENV MARIMO_LOG_LEVEL=INFO
+ENV PYTHONUNBUFFERED=1
 
-# Expose Marimo default port
+# Expose port
 EXPOSE 2718
 
-# Use the new ASGI-based startup script
-CMD ["python", "src/start_marimo.py"]
+# Start both the simple server (for API) and Marimo
+CMD ["sh", "-c", "python simple_server.py & python -m marimo edit --host 0.0.0.0 --port 2718 --headless --no-token /app/notebooks/"]

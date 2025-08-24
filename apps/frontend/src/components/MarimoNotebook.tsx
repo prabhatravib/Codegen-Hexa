@@ -15,7 +15,7 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
   const iframeRef = useRef<HTMLIFrameElement>(null)
   
   useEffect(() => {
-    // Use the real Marimo container with Cloudflare KV storage
+    // Use the real Marimo container with proper notebook creation
     const generateInteractiveNotebook = async () => {
       try {
         setStatus('loading')
@@ -24,7 +24,7 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
         const notebookId = `notebook_${Date.now()}_${Math.random().toString(36).substring(2, 11).replace(/[^a-z0-9]/g, '')}`
         
         // Use your Cloudflare Container URL directly
-        const response = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/api/save', {
+        const response = await fetch('https://marimo-container-use.prabhatravib.workers.dev/api/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -37,7 +37,7 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
           const data = await response.json()
           if (data.success) {
             // Use the container URL for the iframe with embedded=true to eliminate double iframe
-            const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${data.id}?embedded=true`
+            const marimoUrl = `https://marimo-container-use.prabhatravib.workers.dev/notebooks/${data.id}?embedded=true`
             setMarimoUrl(marimoUrl)
             setStatus('ready')
           } else {
@@ -89,7 +89,7 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
         try {
           const notebookId = `notebook_${Date.now()}_${Math.random().toString(36).substring(2, 11).replace(/[^a-z0-9]/g, '')}`
           
-          const response = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/api/save', {
+          const response = await fetch('https://marimo-container-use.prabhatravib.workers.dev/api/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -102,7 +102,7 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
             const data = await response.json()
             if (data.success) {
               // Use the container URL for the iframe with embedded=true to eliminate double iframe
-              const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${data.id}?embedded=true`
+              const marimoUrl = `https://marimo-container-use.prabhatravib.workers.dev/notebooks/${data.id}?embedded=true`
               setMarimoUrl(marimoUrl)
               setStatus('ready')
             } else {
