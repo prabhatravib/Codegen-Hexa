@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 def main():
-    """Simple startup script for Cloudflare Containers"""
+    """Startup script for Cloudflare Containers - using working subprocess approach"""
     print("🚀 Starting Marimo Container...")
     
     try:
@@ -16,19 +16,16 @@ def main():
         
         # Create a unique UUID notebook
         print("🔧 Creating unique UUID notebook...")
-        create_result = subprocess.run(["python", "src/create_uuid_notebook.py"], 
-                                     capture_output=True, text=True, cwd="/app")
-        print(f"✅ Notebook creation output: {create_result.stdout}")
-        if create_result.stderr:
-            print(f"⚠️  Notebook creation warnings: {create_result.stderr}")
+        from create_uuid_notebook import create_uuid_notebook
+        notebook_name = create_uuid_notebook()
+        print(f"✅ Created notebook: {notebook_name}")
         
         # Find the created notebook file
-        notebook_files = list(notebooks_dir.glob("*_marimo_notebook.py"))
-        if not notebook_files:
-            print("❌ No notebook files found!")
+        notebook_path = notebooks_dir / notebook_name
+        if not notebook_path.exists():
+            print("❌ Notebook file not found!")
             return 1
         
-        notebook_path = notebook_files[0]
         print(f"✅ Using notebook: {notebook_path}")
         
         # Test if we can run Python
@@ -41,7 +38,7 @@ def main():
         marimo_result = subprocess.run(["python", "-m", "marimo", "--version"], capture_output=True, text=True)
         print(f"✅ Marimo test: {marimo_result.stdout.strip()}")
         
-        # Start Marimo with the notebook file
+        # Start Marimo with the notebook file (this is what works on Cloudflare)
         print("🎯 Starting Marimo...")
         cmd = [
             "python", "-m", "marimo", "edit",
@@ -54,7 +51,7 @@ def main():
         
         print(f"📝 Command: {' '.join(cmd)}")
         
-        # Start Marimo
+        # Start Marimo - this is the working approach for Cloudflare Containers
         process = subprocess.Popen(cmd)
         print(f"✅ Marimo started with PID: {process.pid}")
         
@@ -63,7 +60,9 @@ def main():
         
         if process.poll() is None:
             print("🎉 Marimo is running successfully!")
-            # Keep container alive
+            print("🌐 WebSocket endpoint will be at: /ws")
+            print("📱 Container is ready for Cloudflare")
+            # Keep container alive - this is what Cloudflare expects
             process.wait()
         else:
             stdout, stderr = process.communicate()

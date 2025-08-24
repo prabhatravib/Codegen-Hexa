@@ -4,7 +4,8 @@
   border-radius: 8px;
   overflow: hidden;
   margin: 2rem auto;
-  max-width: 95vw;
+  max-width: 75vw; /* Match the main content area width (70-75% of viewport) */
+  width: 100%; /* Use full available width within the constraint */
   border: 1px solid #2d2e3f;
   display: flex;
   flex-direction: column;

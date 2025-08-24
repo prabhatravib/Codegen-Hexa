@@ -262,6 +262,35 @@ export default {
       });
     }
 
+    // Handle WebSocket upgrade requests properly
+    if (url.pathname === '/ws') {
+      console.log('Handling WebSocket request');
+      
+      // Get the container instance
+      const container = getContainer(env.MARIMO);
+      await container.start();
+      
+      // Forward WebSocket request to the container
+      try {
+        const response = await container.fetch(request);
+        
+        // Add CORS headers for WebSocket
+        const newHeaders = new Headers(response.headers);
+        newHeaders.set('Access-Control-Allow-Origin', 'https://codegen-hexa.prabhatravib.workers.dev');
+        newHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        newHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: newHeaders
+        });
+      } catch (error) {
+        console.error('WebSocket forwarding error:', error);
+        return new Response('WebSocket connection failed', { status: 500 });
+      }
+    }
+
     // Get the container instance
     const container = getContainer(env.MARIMO);
     

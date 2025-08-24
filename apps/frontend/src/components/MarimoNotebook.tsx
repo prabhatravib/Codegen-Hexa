@@ -41,10 +41,11 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
             setMarimoUrl(marimoUrl)
             setStatus('ready')
           } else {
-            throw new Error('Failed to save notebook to Marimo container')
+            throw new Error(data.error || 'Failed to save notebook to Marimo container')
           }
         } else {
-          throw new Error('Failed to save notebook to Marimo container')
+          const errorText = await response.text()
+          throw new Error(`HTTP ${response.status}: ${errorText}`)
         }
       } catch (error) {
         console.error('Error saving notebook to Marimo container:', error)
@@ -105,13 +106,14 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
               setMarimoUrl(marimoUrl)
               setStatus('ready')
             } else {
-              throw new Error('Failed to save notebook to Marimo container')
+              throw new Error(data.error || 'Failed to save notebook to Marimo container')
             }
           } else {
-            throw new Error('Failed to save notebook to Marimo container')
+            const errorText = await response.text()
+            throw new Error(`HTTP ${response.status}: ${errorText}`)
           }
         } catch (error) {
-          setError('Failed to save notebook to Marimo container')
+          setError(error instanceof Error ? error.message : 'Failed to save notebook to Marimo container')
           setStatus('error')
         } finally {
           setIsLoading(false)
@@ -126,8 +128,7 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto mb-4"></div>
-          <p className="text-white">Saving to Marimo Container...</p>
-          <p className="text-sm text-gray-400 mt-2">This will give you the real interactive interface</p>
+          <p className="text-white">Creating Marimo Notebook...</p>
         </div>
       </div>
     )
@@ -163,13 +164,13 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
         {status === 'loading' && (
           <div className="flex items-center gap-2 text-yellow-400">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-400"></div>
-            <span>Saving to Marimo container...</span>
+            <span>Creating Marimo Notebook...</span>
           </div>
         )}
         {status === 'ready' && (
           <div className="flex items-center gap-2 text-green-400">
             <CheckCircle className="w-4 h-4" />
-            <span>Notebook saved to Cloudflare KV! Interactive interface ready.</span>
+            <span>Notebook saved to Cloudflare Container! Interactive interface ready.</span>
           </div>
         )}
         {status === 'error' && (
@@ -184,12 +185,12 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
       </div>
       
       {marimoUrl ? (
-        <div className="relative">
+        <div className="relative w-full">
           <iframe
             ref={iframeRef}
             src={marimoUrl}
             className="w-full min-h-[800px] h-full border border-gray-600 rounded-lg bg-gray-900"
-            style={{ height: '800px', minHeight: '800px' }}
+            style={{ height: '800px', minHeight: '800px', width: '100%' }}
             title="Real Interactive Marimo Notebook"
             sandbox="allow-scripts allow-forms allow-popups allow-modals allow-same-origin"
           />
@@ -202,6 +203,9 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
           {error && (
             <div className="mt-4 p-3 bg-red-900/20 border border-red-700 rounded-lg">
               <p className="text-red-400 text-sm">{error}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                The "kernel not found" error typically indicates a server startup issue, not a code syntax problem.
+              </p>
             </div>
           )}
         </div>
