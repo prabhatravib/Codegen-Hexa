@@ -137,130 +137,57 @@ marimoRouter.get('/viewer/:serverId', async (c) => {
   }
 })
 
-// Save notebook to Marimo container
+// Save notebook to Marimo container (using twilight-cell-b373 approach)
 marimoRouter.post('/save-to-container', async (c) => {
   try {
     const body = await c.req.json()
-    console.log('Received body:', body)
+    console.log('Received request body:', body)
+    console.log('Body type:', typeof body)
+    console.log('Body keys:', Object.keys(body))
     
-    const { notebookContent, notebookId } = body
+    const { notebookContent, serverId } = body
     
-    // Validate required fields
-    if (!notebookContent || !notebookId) {
-      console.error('Missing required fields:', { notebookContent: !!notebookContent, notebookId: !!notebookId })
+    console.log('Extracted fields:', { notebookContent: !!notebookContent, serverId: !!serverId })
+    console.log('Field lengths:', { 
+      notebookContentLength: notebookContent ? notebookContent.length : 0, 
+      serverIdLength: serverId ? serverId.length : 0 
+    })
+    
+    if (!notebookContent || !serverId) {
+      console.log('Missing fields detected:', { 
+        hasNotebookContent: !!notebookContent, 
+        hasServerId: !!serverId 
+      })
       return c.json({ 
         success: false, 
-        error: 'Missing required fields: notebookContent and notebookId' 
+        error: 'Missing required fields: notebookContent and serverId' 
       }, 400)
     }
     
-    console.log('Storing notebook:', { id: notebookId, contentLength: notebookContent.length })
+    console.log('Saving notebook to container:', { serverId, contentLength: notebookContent.length })
     
-    // Store the notebook in our service first
-    marimoService.storeNotebook(notebookId, notebookContent)
+    // Forward to your Cloudflare Container
+    const response = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/api/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: notebookContent,
+        id: serverId
+      })
+    })
     
-    // Forward to Marimo container to save
-    const marimoUrl = `https://codegen-hexa-marimo.prabhatravib.workers.dev/marimo/api/save`
-    
-    console.log('Calling Marimo container at:', marimoUrl)
-    console.log('Request body:', JSON.stringify({
-      content: notebookContent,
-      id: notebookId
-    }))
-    
-    // Try to call Marimo container with retry logic
-    let response: Response | null = null
-    let lastError: string = ''
-    
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        console.log(`Attempt ${attempt} to call Marimo container`)
-        
-        response = await fetch(marimoUrl, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'User-Agent': 'Codegen-Hexa-Backend/1.0'
-          },
-          body: JSON.stringify({
-            content: notebookContent,
-            id: notebookId
-          })
-        })
-        
-        console.log(`Attempt ${attempt} response status:`, response.status)
-        console.log(`Attempt ${attempt} response ok:`, response.ok)
-        
-        if (response.ok) {
-          break // Success, exit retry loop
-        }
-        
-        const errorBody = await response.text()
-        lastError = `HTTP ${response.status}: ${errorBody}`
-        console.error(`Attempt ${attempt} failed:`, lastError)
-        
-        if (attempt < 3) {
-          console.log(`Waiting 1 second before retry...`)
-          await new Promise(resolve => setTimeout(resolve, 1000))
-        }
-        
-      } catch (error) {
-        lastError = error instanceof Error ? error.message : 'Unknown error'
-        console.error(`Attempt ${attempt} error:`, lastError)
-        
-        if (attempt < 3) {
-          console.log(`Waiting 1 second before retry...`)
-          await new Promise(resolve => setTimeout(resolve, 1000))
-        }
-      }
-    }
-    
-    if (response && response.ok) {
-      const responseBody = await response.text()
-      console.log('Marimo container response body:', responseBody)
-      
+    if (response.ok) {
+      const data = await response.json() as { success: boolean; id: string }
       return c.json({
         success: true,
-        marimoUrl: `https://codegen-hexa-backend.prabhatravib.workers.dev/api/marimo/notebook/${notebookId}`,
-        containerUrl: `https://codegen-hexa-marimo.prabhatravib.workers.dev/marimo/notebook/${notebookId}`
+        marimoUrl: `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${data.id}`,
+        notebookId: data.id
       })
     }
     
-    // All attempts failed
-    console.error('All attempts to call Marimo container failed. Last error:', lastError)
-    throw new Error(`Failed to save to Marimo container after 3 attempts: ${lastError}`)
+    throw new Error('Failed to save to container')
   } catch (error) {
-    console.error('Error saving to Marimo:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-    return c.json({ success: false, error: errorMessage }, 500)
-  }
-})
-
-// Store notebook endpoint (for Marimo container to use)
-marimoRouter.post('/store-notebook', async (c) => {
-  try {
-    const body = await c.req.json()
-    const { notebookContent, notebookId } = body
-    
-    if (!notebookContent || !notebookId) {
-      return c.json({ 
-        success: false, 
-        error: 'Missing required fields: notebookContent and notebookId' 
-      }, 400)
-    }
-    
-    console.log('Storing notebook from Marimo container:', { id: notebookId, contentLength: notebookContent.length })
-    
-    // Store the notebook in our service
-    marimoService.storeNotebook(notebookId, notebookContent)
-    
-    return c.json({
-      success: true,
-      message: 'Notebook stored successfully',
-      notebookId: notebookId
-    })
-  } catch (error) {
-    console.error('Error storing notebook from Marimo container:', error)
+    console.error('Error saving notebook to container:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     return c.json({ success: false, error: errorMessage }, 500)
   }
@@ -283,7 +210,7 @@ marimoRouter.get('/notebook/:notebookId', async (c) => {
     if (!notebook) {
       return c.json({ 
         success: false, 
-        error: 'Notebook not foungghh' 
+        error: 'Notebook not found' 
       }, 404)
     }
 

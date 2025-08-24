@@ -1,7 +1,0 @@
-marimo
-numpy
-pandas
-matplotlib
-httpx
-pydantic
-requests

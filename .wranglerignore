@@ -2,6 +2,7 @@
 hexa/
 pitext_codegen/
 src/
+twilight-cell-b373/
 
 # Exclude development files
 *.log

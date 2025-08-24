@@ -21,10 +21,10 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
         setStatus('loading')
         setError(null)
         
-        // Save the notebook to the Marimo container with KV storage
         const notebookId = `notebook_${Date.now()}_${Math.random().toString(36).substring(2, 11).replace(/[^a-z0-9]/g, '')}`
         
-        const response = await fetch('https://codegen-marimo.prabhatravib.workers.dev/marimo/api/save', {
+        // Use your Cloudflare Container URL directly
+        const response = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/api/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -36,8 +36,8 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
         if (response.ok) {
           const data = await response.json()
           if (data.success) {
-            // Use the mountId to create the proxy URL
-            const marimoUrl = `https://codegen-marimo.prabhatravib.workers.dev/marimo/notebook/${data.mountId}`
+            // Use the container URL for the iframe
+            const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${data.id}`
             setMarimoUrl(marimoUrl)
             setStatus('ready')
           } else {
@@ -88,7 +88,7 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
         try {
           const notebookId = `notebook_${Date.now()}_${Math.random().toString(36).substring(2, 11).replace(/[^a-z0-9]/g, '')}`
           
-          const response = await fetch('https://codegen-marimo.prabhatravib.workers.dev/marimo/api/save', {
+          const response = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/api/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -100,7 +100,8 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
           if (response.ok) {
             const data = await response.json()
             if (data.success) {
-              const marimoUrl = `https://codegen-marimo.prabhatravib.workers.dev/marimo/notebook/${data.mountId}`
+              // Use the container URL for the iframe
+              const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${data.id}`
               setMarimoUrl(marimoUrl)
               setStatus('ready')
             } else {
