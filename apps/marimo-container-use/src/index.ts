@@ -115,105 +115,120 @@ export default {
       const notebookId = url.pathname.split('/')[2];
       console.log('Accessing notebook:', notebookId);
       
+      // Check if this is an embedded request
+      const isEmbedded = url.searchParams.get('embedded') === 'true';
+      
+      if (isEmbedded) {
+        // For embedded requests, redirect directly to Marimo without wrapper
+        // This eliminates the double-iframe issue
+        return Response.redirect(new URL('/', request.url));
+      }
+      
       // Get the container instance
       const container = getContainer(env.MARIMO);
       await container.start();
       
-      // Create an HTML page that embeds the Marimo interface
+      // Create an HTML page that embeds the Marimo interface with proper sizing
       const html = `<!DOCTYPE html>
-<html>
+<html style="height: 100%; margin: 0; padding: 0;">
 <head>
     <title>Marimo Notebook - ${notebookId}</title>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            margin: 0; 
-            padding: 0; 
-            background: #1a1a1a;
-            color: white;
-            overflow: hidden;
-            height: 100vh;
-        }
-        .marimo-container {
+        * {
             margin: 0;
             padding: 0;
-            background: #1a1a1a;
-            border-radius: 0;
-            overflow: hidden;
-            border: none;
-            height: auto !important;
-            min-height: 700px !important;
-            width: 100% !important;
-            display: block !important;
+            box-sizing: border-box;
         }
+        
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: #1a1a1a;
+            color: white;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .marimo-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
         .marimo-header {
-            padding: 0.5rem;
+            padding: 0.75rem;
             background: rgba(156, 39, 176, 0.1);
             border-bottom: 1px solid rgba(255,255,255,.2);
-            text-align: center;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
+            flex-shrink: 0;
         }
+        
         .marimo-header h3 {
             color: #9C27B0;
             margin: 0;
-            font-size: 1rem;
+            font-size: 1.1rem;
+            text-align: center;
         }
+        
         .notebook-id {
             color: rgba(255,255,255,0.8);
-            margin: 0;
+            margin: 0.25rem 0 0 0;
             font-size: 0.75rem;
+            text-align: center;
         }
+        
+        .status {
+            padding: 0.5rem;
+            background: #2a2a2a;
+            border-bottom: 1px solid #444;
+            font-size: 0.875rem;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        
+        .marimo-iframe-wrapper {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            min-height: 0; /* Important for flexbox */
+        }
+        
+        .marimo-iframe-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #fff;
+        }
+        
         .external-link {
             display: inline-block;
-            padding: 0.2rem 0.5rem;
+            padding: 0.25rem 0.5rem;
+            margin-top: 0.25rem;
             background: rgba(156, 39, 176, 0.2);
             color: #9C27B0;
             text-decoration: none;
             border-radius: 3px;
             border: 1px solid rgba(156, 39, 176, 0.3);
             transition: all 0.3s ease;
-            font-size: 0.7rem;
+            font-size: 0.75rem;
         }
+        
         .external-link:hover {
             background: rgba(156, 39, 176, 0.3);
             transform: translateY(-1px);
-        }
-        .status {
-            padding: 0.2rem;
-            background: #2a2a2a;
-            border-bottom: 1px solid #444;
-            font-size: 11px;
-            text-align: center;
-            position: fixed;
-            top: 60px;
-            left: 0;
-            right: 0;
-            z-index: 999;
-        }
-        .marimo-iframe-wrapper {
-            padding: 0;
-            margin: 0;
-            background: #fff;
-            height: 600px !important;
-            min-height: 500px !important;
-            width: 100% !important;
-            display: block !important;
-        }
-        .marimo-iframe-wrapper iframe {
-            width: 100% !important;
-            height: 600px !important;
-            min-height: 500px !important;
-            border: none !important;
-            border-radius: 0;
-            background: #fff;
-            margin: 0;
-            padding: 0;
-            display: block !important;
         }
     </style>
 </head>
@@ -222,17 +237,16 @@ export default {
         <div class="marimo-header">
             <h3>💡 Interactive Marimo Notebook</h3>
             <div class="notebook-id">ID: ${notebookId}</div>
-            <a href="/" target="_blank" class="external-link">Open in New Tab</a>
+            <a href="/" target="_blank" class="external-link">Open Full Marimo</a>
         </div>
         <div class="status">
-            ✅ Notebook loaded successfully • Interactive Marimo interface ready
+            ✅ Notebook loaded • Interactive Marimo interface ready
         </div>
         <div class="marimo-iframe-wrapper">
             <iframe 
                 src="/" 
                 title="Interactive Marimo Notebook"
-                style="width: 100% !important; height: 600px !important; min-height: 500px !important; border: none !important; display: block !important;"
-                sandbox="allow-scripts allow-forms allow-popups allow-modals allow-same-origin"
+                sandbox="allow-scripts allow-forms allow-popups allow-modals allow-same-origin allow-downloads"
             ></iframe>
         </div>
     </div>

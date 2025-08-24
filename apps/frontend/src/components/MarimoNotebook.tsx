@@ -36,8 +36,8 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
         if (response.ok) {
           const data = await response.json()
           if (data.success) {
-            // Use the container URL for the iframe
-            const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${data.id}`
+            // Use the container URL for the iframe with embedded=true to eliminate double iframe
+            const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${data.id}?embedded=true`
             setMarimoUrl(marimoUrl)
             setStatus('ready')
           } else {
@@ -100,8 +100,8 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
           if (response.ok) {
             const data = await response.json()
             if (data.success) {
-              // Use the container URL for the iframe
-              const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${data.id}`
+              // Use the container URL for the iframe with embedded=true to eliminate double iframe
+              const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${data.id}?embedded=true`
               setMarimoUrl(marimoUrl)
               setStatus('ready')
             } else {
@@ -188,7 +188,8 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
           <iframe
             ref={iframeRef}
             src={marimoUrl}
-            className="w-full h-[800px] border border-gray-600 rounded-lg bg-gray-900"
+            className="w-full min-h-[800px] h-full border border-gray-600 rounded-lg bg-gray-900"
+            style={{ height: '800px', minHeight: '800px' }}
             title="Real Interactive Marimo Notebook"
             sandbox="allow-scripts allow-forms allow-popups allow-modals allow-same-origin"
           />
