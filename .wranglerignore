@@ -1,0 +1,31 @@
+# Exclude reference folders from Cloudflare Workers deployment
+hexa/
+pitext_codegen/
+src/
+twilight-cell-b373/
+
+# Exclude development files
+*.log
+.env*
+.git/
+.gitignore
+README.md
+node_modules/
+.vscode/
+.idea/
+
+# Exclude build artifacts that aren't needed for the worker
+dist/
+build/
+*.tsbuildinfo
+
+# Exclude test files
+**/*.test.*
+**/*.spec.*
+test/
+tests/
+__tests__/
+
+# Exclude documentation
+docs/
+*.md

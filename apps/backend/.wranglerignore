@@ -1,0 +1,13 @@
+# Ignore Python files that are not part of the backend
+../src/
+../marimo-server/
+../pitext_codegen/
+
+# Ignore TypeScript and other non-Python files
+*.ts
+*.tsx
+*.js
+*.jsx
+tsconfig*.json
+package*.json
+node_modules/

@@ -1,0 +1,16 @@
+{
+	"name": "twilight-cell-b373",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"start": "wrangler dev"
+	},
+	"devDependencies": {
+		"wrangler": "^4.32.0"
+	},
+	"dependencies": {
+		"@cloudflare/containers": "^0.0.26"
+	}
+}
