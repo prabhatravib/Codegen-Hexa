@@ -23,8 +23,8 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
         
         const notebookId = `notebook_${Date.now()}_${Math.random().toString(36).substring(2, 11).replace(/[^a-z0-9]/g, '')}`
         
-        // Use your Cloudflare Container URL directly
-        const response = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/api/save', {
+        // First save to KV via Worker
+        const saveResponse = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/api/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -33,18 +33,32 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
           })
         })
         
-        if (response.ok) {
-          const data = await response.json()
-          if (data.success) {
-            // Use the container URL for the iframe with embedded=true to eliminate double iframe
-            const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${notebookId}?embedded=true`
-            setMarimoUrl(marimoUrl)
-            setStatus('ready')
+        if (saveResponse.ok) {
+          const saveData = await saveResponse.json()
+          if (saveData.success) {
+            // Now create the notebook in the container
+            const createResponse = await fetch(`https://twilight-cell-b373.prabhatravib.workers.dev/container/create/${notebookId}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: notebookId,
+                content: marimoNotebook
+              })
+            })
+            
+            if (createResponse.ok) {
+              // Use the container URL directly for the iframe
+              const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${notebookId}?embedded=true`
+              setMarimoUrl(marimoUrl)
+              setStatus('ready')
+            } else {
+              throw new Error(`Container creation failed: HTTP ${createResponse.status}`)
+            }
           } else {
-            throw new Error(`Container response error: ${JSON.stringify(data)}`)
+            throw new Error(`Save failed: ${JSON.stringify(saveData)}`)
           }
         } else {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          throw new Error(`Save failed: HTTP ${saveResponse.status}: ${saveResponse.statusText}`)
         }
               } catch (error) {
           console.error('Error saving notebook to Marimo container:', error)
@@ -100,15 +114,29 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
           if (response.ok) {
             const data = await response.json()
             if (data.success) {
-              // Use the container URL for the iframe with embedded=true to eliminate double iframe
-              const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${notebookId}?embedded=true`
-              setMarimoUrl(marimoUrl)
-              setStatus('ready')
+              // Now create the notebook in the container
+              const createResponse = await fetch(`https://twilight-cell-b373.prabhatravib.workers.dev/container/create/${notebookId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  id: notebookId,
+                  content: marimoNotebook
+                })
+              })
+              
+              if (createResponse.ok) {
+                // Use the container URL directly for the iframe
+                const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${notebookId}?embedded=true`
+                setMarimoUrl(marimoUrl)
+                setStatus('ready')
+              } else {
+                throw new Error(`Container creation failed: HTTP ${createResponse.status}`)
+              }
             } else {
-              throw new Error(`Container response error: ${JSON.stringify(data)}`)
+              throw new Error(`Save failed: ${JSON.stringify(data)}`)
             }
           } else {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+            throw new Error(`Save failed: HTTP ${response.status}: ${response.statusText}`)
           }
         } catch (error) {
           setError(error instanceof Error ? error.message : String(error))

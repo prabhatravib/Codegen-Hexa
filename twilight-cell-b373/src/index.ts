@@ -27,8 +27,8 @@ export default {
         const { content, id } = await request.json() as { content: string; id: string };
         if (!content || typeof content !== "string") return cors(json({ error: "content required" }, 400));
         const nbId = id ?? crypto.randomUUID();
-        await env.NOTEBOOKS.put(nbId, content, { metadata: { bytes: new TextEncoder().encode(content).byteLength } });
-        return cors(json({ id: nbId }, 201));
+          await env.NOTEBOOKS.put(nbId, content, { metadata: { bytes: new TextEncoder().encode(content).byteLength } });
+  return cors(json({ success: true, id: nbId }, 201));
       }
 
       // Read notebook from KV
