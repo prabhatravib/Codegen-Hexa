@@ -11,7 +11,6 @@
 		"wrangler": "^4.32.0"
 	},
 	"dependencies": {
-		"@cloudflare/containers": "^0.0.26",
-		"@cloudflare/workers-types": "^4.20250829.0"
+		"@cloudflare/containers": "^0.0.26"
 	}
 }
