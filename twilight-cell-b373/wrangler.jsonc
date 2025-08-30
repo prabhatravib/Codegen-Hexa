@@ -3,17 +3,12 @@
   "main": "src/index.ts",
   "compatibility_date": "2025-08-22",
   "observability": { "enabled": true },
+  "kv_namespaces": [
+    { "binding": "NOTEBOOKS", "id": "67e9cba9ec3d45ff94e6337998bbe111" }
+  ],
   "durable_objects": {
     "bindings": [{ "name": "MARIMO", "class_name": "MarimoContainer" }]
   },
-  "migrations": [
-    {
-      "tag": "v3",
-      "new_classes": [
-        "MarimoContainer"
-      ]
-    }
-  ],
   "containers": [
     {
       "class_name": "MarimoContainer",

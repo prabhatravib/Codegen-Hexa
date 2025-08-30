@@ -37,22 +37,22 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
           const data = await response.json()
           if (data.success) {
             // Use the container URL for the iframe with embedded=true to eliminate double iframe
-            const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${data.id}?embedded=true`
+            const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${notebookId}?embedded=true`
             setMarimoUrl(marimoUrl)
             setStatus('ready')
           } else {
-            throw new Error('Failed to save notebook to Marimo container')
+            throw new Error(`Container response error: ${JSON.stringify(data)}`)
           }
         } else {
-          throw new Error('Failed to save notebook to Marimo container')
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
-      } catch (error) {
-        console.error('Error saving notebook to Marimo container:', error)
-        setError(error instanceof Error ? error.message : 'Unknown error occurred')
-        setStatus('error')
-      } finally {
-        setIsLoading(false)
-      }
+              } catch (error) {
+          console.error('Error saving notebook to Marimo container:', error)
+          setError(error instanceof Error ? error.message : String(error))
+          setStatus('error')
+        } finally {
+          setIsLoading(false)
+        }
     }
     
     generateInteractiveNotebook()
@@ -101,17 +101,17 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
             const data = await response.json()
             if (data.success) {
               // Use the container URL for the iframe with embedded=true to eliminate double iframe
-              const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${data.id}?embedded=true`
+              const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${notebookId}?embedded=true`
               setMarimoUrl(marimoUrl)
               setStatus('ready')
             } else {
-              throw new Error('Failed to save notebook to Marimo container')
+              throw new Error(`Container response error: ${JSON.stringify(data)}`)
             }
           } else {
-            throw new Error('Failed to save notebook to Marimo container')
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
           }
         } catch (error) {
-          setError('Failed to save notebook to Marimo container')
+          setError(error instanceof Error ? error.message : String(error))
           setStatus('error')
         } finally {
           setIsLoading(false)
@@ -126,8 +126,8 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto mb-4"></div>
-          <p className="text-white">Saving to Marimo Container...</p>
-          <p className="text-sm text-gray-400 mt-2">This will give you the real interactive interface</p>
+          <p className="text-white">Sending notebook to Marimo container...</p>
+          <p className="text-sm text-gray-400 mt-2">This may take a few seconds</p>
         </div>
       </div>
     )
@@ -163,13 +163,13 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
         {status === 'loading' && (
           <div className="flex items-center gap-2 text-yellow-400">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-400"></div>
-            <span>Saving to Marimo container...</span>
+            <span>Sending to Marimo container...</span>
           </div>
         )}
         {status === 'ready' && (
           <div className="flex items-center gap-2 text-green-400">
             <CheckCircle className="w-4 h-4" />
-            <span>Notebook saved to Cloudflare KV! Interactive interface ready.</span>
+            <span>Notebook sent to Marimo container</span>
           </div>
         )}
         {status === 'error' && (
@@ -197,12 +197,13 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
       ) : (
         <div className="text-center p-8 text-gray-400">
           <Code className="w-16 h-16 mx-auto mb-4 opacity-50" />
-          <p>Failed to load interactive notebook from Marimo container</p>
-          <p className="text-sm mt-2">You can still download the notebook file</p>
-          {error && (
-            <div className="mt-4 p-3 bg-red-900/20 border border-red-700 rounded-lg">
-              <p className="text-red-400 text-sm">{error}</p>
+          {error ? (
+            <div className="mt-4 p-4 bg-red-900/20 border border-red-700 rounded-lg">
+              <h4 className="text-red-400 font-semibold mb-2">Error Details:</h4>
+              <pre className="text-red-300 text-sm text-left overflow-auto max-h-96 overflow-y-auto">{error}</pre>
             </div>
+          ) : (
+            <p>No notebook URL available</p>
           )}
         </div>
       )}
