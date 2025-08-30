@@ -55,28 +55,35 @@ export default {
           headers: { "content-type": "application/json" },
           body
         });
+        
         const resp = await stub.fetch(containerReq);
+        
+        // If we get a 401, log more details
+        if (resp.status === 401) {
+          console.error("Container returned 401:", await resp.text());
+        }
+        
         return cors(resp);
       }
 
       // Handle notebook display - create in container from KV
       if (pathname.startsWith('/notebooks/')) {
-        const notebookId = pathname.replace('/notebooks/', '').replace('?embedded=true', '');
+        const notebookId = pathname.replace('/notebooks/', '').split('?')[0];
         
         try {
-          // Get the notebook content from KV
-          const notebookContent = await env.NOTEBOOKS.get(notebookId);
-          
-          if (notebookContent) {
-            // Get the container
-            const container = env.MARIMO.get(env.MARIMO.newUniqueId());
+      // Get the notebook content from KV
+      const notebookContent = await env.NOTEBOOKS.get(notebookId);
+      
+      if (notebookContent) {
+            // Get or create a container instance
+            const containerId = env.MARIMO.idFromName(notebookId);
+            const container = env.MARIMO.get(containerId);
             
-            // Create POST request with notebook content in JSON body (not headers)
-            const containerRequest = new Request("http://container/create", {
+            // First, create the notebook in the container
+            const createRequest = new Request("http://container/create", {
               method: "POST",
-              headers: { 
-                "Content-Type": "application/json",
-                "X-Notebook-ID": notebookId
+          headers: {
+                "Content-Type": "application/json"
               },
               body: JSON.stringify({ 
                 id: notebookId, 
@@ -84,12 +91,21 @@ export default {
               })
             });
             
-            return container.fetch(containerRequest);
-          } else {
-            return new Response('Notebook not found', { 
-              status: 404,
-              headers: {
-                'Access-Control-Allow-Origin': 'https://codegen-hexa.prabhatravib.workers.dev',
+            // Send create request and wait for Marimo to start
+            await container.fetch(createRequest);
+            
+            // Now proxy the actual request to Marimo interface
+            const marimoRequest = new Request("http://container/", {
+              method: "GET",
+              headers: request.headers
+            });
+            
+            return container.fetch(marimoRequest);
+      } else {
+        return new Response('Notebook not found', { 
+          status: 404,
+          headers: {
+                'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
               }
@@ -100,14 +116,14 @@ export default {
           return new Response('Error loading notebook', { 
             status: 500,
             headers: {
-              'Access-Control-Allow-Origin': 'https://codegen-hexa.prabhatravib.workers.dev',
-              'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-              'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
-            }
-          });
-        }
+              'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
+          }
+        });
       }
-
+    }
+    
       // Debug 1: echo Worker inbound headers and body size
       if (pathname === "/debug/worker-echo" && request.method === "POST") {
         const headers = [...request.headers.entries()];

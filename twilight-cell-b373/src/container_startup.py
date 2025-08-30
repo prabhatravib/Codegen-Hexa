@@ -1,126 +1,173 @@
 #!/usr/bin/env python3
 """
-Dynamic container startup that creates custom notebooks from request body
+Container that handles notebook creation and serves Marimo
 """
 
 import os
 import sys
 import json
+import subprocess
+import time
+import urllib.request
+import urllib.error
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from threading import Thread
 
-class MarimoHandler(BaseHTTPRequestHandler):
+# Global variable to track Marimo process
+marimo_process = None
+
+def wait_for_marimo_ready(max_wait=30):
+    """Wait for Marimo to be ready and responding on port 2718"""
+    print("⏳ Waiting for Marimo to be ready...")
+    start_time = time.time()
+    
+    while time.time() - start_time < max_wait:
+        try:
+            # Try to connect to Marimo
+            response = urllib.request.urlopen('http://localhost:2718', timeout=2)
+            if response.getcode() == 200:
+                print("✅ Marimo is ready and responding")
+                return True
+        except (urllib.error.URLError, urllib.error.HTTPError, ConnectionRefusedError):
+            pass
+        except Exception as e:
+            print(f"⚠️ Unexpected error checking Marimo: {e}")
+        
+        time.sleep(1)
+        print(f"⏳ Still waiting... ({int(time.time() - start_time)}s)")
+    
+    print("❌ Marimo failed to start within timeout")
+    return False
+
+class NotebookHandler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        """Handle preflight CORS requests"""
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
+    
     def do_GET(self):
         """Handle GET requests"""
-        self.send_response(200)
-        self.send_header('Content-Type', 'text/html')
-        self.end_headers()
-        self.wfile.write(b'<h1>Marimo Container Ready</h1><p>Send POST to /create with notebook content</p>')
+        if self.path == '/health':
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b'OK')
+        else:
+            # Proxy to Marimo if it's running
+            if marimo_process and marimo_process.poll() is None:
+                self.proxy_to_marimo()
+            else:
+                # Hard failure - no graceful fallback
+                self.send_error(503, "Marimo not running")
     
     def do_POST(self):
         """Handle POST requests to create notebooks"""
+        global marimo_process
+        
+        if self.path != '/create':
+            self.send_error(404, f"Unknown endpoint: {self.path}")
+            return
+            
         try:
-            print(f"📥 Received POST request to: {self.path}")
+            print(f"📥 Received POST request to create notebook")
             
-            if self.path == '/create':
-                # Get content length
-                content_length = int(self.headers.get('Content-Length', 0))
-                if content_length == 0:
-                    raise Exception("No content in request body")
-                
-                # Read JSON body
-                body = self.rfile.read(content_length)
-                data = json.loads(body.decode('utf-8'))
-                
-                notebook_id = data.get('id')
-                notebook_content = data.get('content')
-                
-                if not notebook_content:
-                    raise Exception("No notebook content in request body")
-                
-                print(f"✅ Received notebook content for ID: {notebook_id}")
-                print(f"📝 Content length: {len(notebook_content)} characters")
-                
-                # Create notebooks directory
-                notebooks_dir = Path("/app/notebooks")
-                notebooks_dir.mkdir(exist_ok=True)
-                
-                # Write notebook content to file
-                notebook_path = notebooks_dir / f"{notebook_id}.py"
-                notebook_path.write_text(notebook_content, encoding='utf-8')
-                print(f"✅ Created notebook at: {notebook_path}")
-                
-                # Return success response
-                success_response = {
-                    "success": True,
-                    "id": notebook_id,
-                    "message": "Notebook created successfully"
-                }
-                
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps(success_response).encode('utf-8'))
-                print("✅ Success response sent to frontend")
-            elif self.path.startswith('/notebooks/'):
-                # Serve notebook by ID
-                notebook_id = self.path.split('/')[-1].split('?')[0]  # Remove query params
-                notebook_path = Path("/app/notebooks") / f"{notebook_id}.py"
-                
-                if not notebook_path.exists():
-                    self.send_error(404, f"Notebook {notebook_id} not found")
-                    return
-                
-                # Serve the Marimo notebook file
-                self.serve_marimo_notebook(notebook_path)
-            elif self.path == '/debug/echo':
-                # Debug endpoint to echo what container receives
-                content_length = int(self.headers.get('Content-Length', 0))
-                body = self.rfile.read(content_length) if content_length > 0 else b''
-                
-                debug_response = {
-                  "containerReceivedHeaders": [(k, v) for k, v in self.headers.items()],
-                  "containerBodyBytes": len(body)
-                }
-                
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps(debug_response).encode('utf-8'))
-                print("✅ Debug echo endpoint served")
-            else:
-                raise Exception(f"Unknown POST endpoint: {self.path}")
-                
-        except Exception as e:
-            print(f"❌ CRITICAL ERROR: {e}")
-            import traceback
-            traceback.print_exc()
-            self.send_error(500, f"CRITICAL ERROR: {e}\n\n{traceback.format_exc()}")
-    
-    def serve_marimo_notebook(self, notebook_path):
-        """Serve the Marimo notebook file"""
-        try:
-            print("📁 Serving Marimo notebook file...")
+            # Get content length
+            content_length = int(self.headers.get('Content-Length', 0))
+            if content_length == 0:
+                print("❌ No content in request body")
+                self.send_error(400, "No content in request body")
+                return
             
-            # Read the notebook content
-            with open(notebook_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+            # Read JSON body
+            body = self.rfile.read(content_length)
+            print(f"📦 Received {len(body)} bytes")
             
-            # Serve as Python file with proper headers
+            data = json.loads(body.decode('utf-8'))
+            notebook_id = data.get('id', 'notebook')
+            notebook_content = data.get('content', '')
+            
+            if not notebook_content:
+                print("❌ No notebook content in request")
+                self.send_error(400, "No notebook content")
+                return
+            
+            print(f"✅ Received notebook ID: {notebook_id}")
+            print(f"📝 Content length: {len(notebook_content)} characters")
+            
+            # Create notebooks directory
+            notebooks_dir = Path("/app/notebooks")
+            notebooks_dir.mkdir(exist_ok=True)
+            
+            # Write notebook content to file
+            notebook_path = notebooks_dir / f"{notebook_id}.py"
+            notebook_path.write_text(notebook_content, encoding='utf-8')
+            print(f"✅ Created notebook at: {notebook_path}")
+            
+            # Kill any existing Marimo process
+            if marimo_process and marimo_process.poll() is None:
+                print("🔄 Stopping existing Marimo process...")
+                marimo_process.terminate()
+                marimo_process.wait(timeout=5)
+            
+            # Start Marimo with the new notebook
+            print(f"🚀 Starting Marimo with notebook: {notebook_path}")
+            marimo_process = subprocess.Popen([
+                "python", "-m", "marimo", "edit",
+                "--host", "0.0.0.0",
+                "--port", "2718",  # Use a different port for Marimo
+                "--headless",
+                "--no-token",
+                str(notebook_path)
+            ])
+            
+            # Wait for Marimo to actually be ready
+            if not wait_for_marimo_ready():
+                # Kill the failed process
+                if marimo_process and marimo_process.poll() is None:
+                    marimo_process.terminate()
+                    marimo_process.wait(timeout=5)
+                self.send_error(500, "Failed to start Marimo server")
+                return
+            
+            # Send success response
+            response_data = {
+                "success": True,
+                "id": notebook_id,
+                "message": "Notebook created and Marimo started"
+            }
+            
+            response_json = json.dumps(response_data)
             self.send_response(200)
-            self.send_header('Content-Type', 'text/plain; charset=utf-8')
-            self.send_header('Content-Disposition', f'attachment; filename="{notebook_path.name}"')
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(response_json)))
+            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            
-            # Send the notebook content
-            self.wfile.write(content.encode('utf-8'))
-            print("✅ Successfully served Marimo notebook file")
+            self.wfile.write(response_json.encode('utf-8'))
+            print("✅ Success response sent")
             
         except Exception as e:
-            print(f"❌ CRITICAL ERROR serving notebook: {e}")
+            print(f"❌ ERROR: {e}")
             import traceback
             traceback.print_exc()
-            raise Exception(f"Failed to serve notebook: {e}")
+            self.send_error(500, str(e))
+    
+    def proxy_to_marimo(self):
+        """Proxy requests to Marimo server"""
+        # Hard failure if Marimo is not accessible
+        try:
+            # Attempt to connect to Marimo
+            response = urllib.request.urlopen('http://localhost:2718', timeout=5)
+            # If successful, redirect
+            self.send_response(302)
+            self.send_header('Location', 'http://localhost:2718')
+            self.end_headers()
+        except:
+            # Hard failure
+            self.send_error(503, "Marimo server not accessible")
     
     def log_message(self, format, *args):
         """Custom logging"""
@@ -128,23 +175,30 @@ class MarimoHandler(BaseHTTPRequestHandler):
 
 def main():
     """Main startup function"""
-    print("🚀 Starting Marimo container with HTTP handler...")
+    print("🚀 Starting Marimo container...")
+    print(f"🐍 Python version: {sys.version}")
     
     try:
         # Create notebooks directory
         notebooks_dir = Path("/app/notebooks")
         notebooks_dir.mkdir(exist_ok=True)
+        print(f"✅ Created notebooks directory: {notebooks_dir}")
         
         # Start HTTP server on port 8080
-        server = HTTPServer(('0.0.0.0', 8080), MarimoHandler)
-        print(f"🌐 HTTP server started on port 8080")
-        print(f"🎯 Container will create and serve dynamic Marimo notebooks via POST /create")
+        server = HTTPServer(('0.0.0.0', 8080), NotebookHandler)
+        print(f"🌐 HTTP server listening on port 8080")
+        print(f"🎯 Ready to receive notebook creation requests")
         
-        # Start server
+        # Run the server
         server.serve_forever()
         
+    except KeyboardInterrupt:
+        print("\n🛑 Shutting down...")
+        if marimo_process and marimo_process.poll() is None:
+            marimo_process.terminate()
+        sys.exit(0)
     except Exception as e:
-        print(f"❌ CRITICAL CONTAINER STARTUP ERROR: {e}")
+        print(f"❌ CRITICAL ERROR: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

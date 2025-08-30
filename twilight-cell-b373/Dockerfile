@@ -11,9 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy only the essential Python files
+# Copy the startup script
 COPY src/container_startup.py /app/src/
-COPY notebooks/ /app/notebooks/
 
 # Create notebooks directory
 RUN mkdir -p /app/notebooks
@@ -21,6 +20,9 @@ RUN mkdir -p /app/notebooks
 # Set environment variables
 ENV MARIMO_SKIP_UPDATE_CHECK=1
 ENV MARIMO_LOG_LEVEL=INFO
+
+# Expose both ports - 8080 for HTTP server, 2718 for Marimo
+EXPOSE 8080 2718
 
 # Use Python script directly as entrypoint
 CMD ["python", "/app/src/container_startup.py"]
