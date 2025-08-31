@@ -1,8 +1,7 @@
 # deploy-all.ps1
 #requires -Version 5.1
 param(
-  [string]$Root = $PSScriptRoot,
-  [string[]]$Targets = @("apps\backend", "apps\frontend", "twilight-cell-b373")
+  [string]$Root = $PSScriptRoot
 )
 
 $ErrorActionPreference = 'Stop'
@@ -19,23 +18,90 @@ function Resolve-TargetPath {
     throw "Path not found: $rel under root $Root"
 }
 
-# Ensure npm exists
-$null = & npm -v 2>$null
-if ($LASTEXITCODE -ne 0) { throw "npm not found in PATH" }
+# Ensure pnpm exists
+$null = & pnpm -v 2>$null
+if ($LASTEXITCODE -ne 0) { throw "pnpm not found in PATH" }
 
-foreach ($t in $Targets) {
-    $dir = Resolve-TargetPath $t
-    Write-Host "Deploying in $dir"
-    Push-Location $dir
-    try {
-        if (-not (Test-Path 'package.json')) { throw "package.json missing in $dir" }
-        $pkg = Get-Content package.json -Raw | ConvertFrom-Json
-        if (-not $pkg.scripts.deploy) { throw "No 'deploy' script in $dir\package.json" }
-        npm run deploy
-        if ($LASTEXITCODE -ne 0) { throw "npm run deploy failed in $dir with exit code $LASTEXITCODE" }
-    } finally {
-        Pop-Location
-    }
+Write-Host "🚀 Starting complete deployment process..." -ForegroundColor Green
+
+# Step 1: Install all dependencies
+Write-Host "📦 Installing all dependencies..." -ForegroundColor Yellow
+Push-Location $Root
+try {
+    pnpm install
+    if ($LASTEXITCODE -ne 0) { throw "pnpm install failed with exit code $LASTEXITCODE" }
+} finally {
+    Pop-Location
 }
 
-Write-Host "All deployments completed"
+# Step 2: Build all projects
+Write-Host "🔨 Building all projects..." -ForegroundColor Yellow
+
+# Build frontend
+Write-Host "  Building frontend..." -ForegroundColor Cyan
+$frontendDir = Resolve-TargetPath "apps\frontend"
+Push-Location $frontendDir
+try {
+    pnpm run build
+    if ($LASTEXITCODE -ne 0) { throw "Frontend build failed with exit code $LASTEXITCODE" }
+} finally {
+    Pop-Location
+}
+
+# Build backend
+Write-Host "  Building backend..." -ForegroundColor Cyan
+$backendDir = Resolve-TargetPath "apps\backend"
+Push-Location $backendDir
+try {
+    pnpm run build
+    if ($LASTEXITCODE -ne 0) { throw "Backend build failed with exit code $LASTEXITCODE" }
+} finally {
+    Pop-Location
+}
+
+# Build marimo container
+Write-Host "  Building marimo container..." -ForegroundColor Cyan
+$marimoDir = Resolve-TargetPath "twilight-cell-b373"
+Push-Location $marimoDir
+try {
+    pnpm run build
+    if ($LASTEXITCODE -ne 0) { throw "Marimo container build failed with exit code $LASTEXITCODE" }
+} finally {
+    Pop-Location
+}
+
+# Step 3: Deploy all projects
+Write-Host "🚀 Deploying all projects..." -ForegroundColor Yellow
+
+# Deploy marimo container from root (uses root wrangler.jsonc)
+Write-Host "  Deploying marimo container..." -ForegroundColor Cyan
+Push-Location $Root
+try {
+    if (-not (Test-Path 'wrangler.jsonc')) { throw "wrangler.jsonc missing in root" }
+    pnpm exec wrangler deploy
+    if ($LASTEXITCODE -ne 0) { throw "Marimo container deployment failed with exit code $LASTEXITCODE" }
+} finally {
+    Pop-Location
+}
+
+# Deploy backend
+Write-Host "  Deploying backend..." -ForegroundColor Cyan
+Push-Location $backendDir
+try {
+    pnpm run deploy
+    if ($LASTEXITCODE -ne 0) { throw "Backend deployment failed with exit code $LASTEXITCODE" }
+} finally {
+    Pop-Location
+}
+
+# Deploy frontend
+Write-Host "  Deploying frontend..." -ForegroundColor Cyan
+Push-Location $frontendDir
+try {
+    pnpm run deploy
+    if ($LASTEXITCODE -ne 0) { throw "Frontend deployment failed with exit code $LASTEXITCODE" }
+} finally {
+    Pop-Location
+}
+
+Write-Host "✅ All deployments completed successfully!" -ForegroundColor Green

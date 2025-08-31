@@ -1,16 +1,7 @@
 import { Container, getContainer } from "@cloudflare/containers";
 
 export class MarimoContainer extends Container {
-  // Worker will wait until this port is listening
-  defaultPort = 2718; // Marimo default
-  // Optional: keep warm window for idle editing
-  sleepAfter = "2h";
-}
-
-export class MarimoContainerV2 extends Container {
-  // Worker will wait until this port is listening
-  defaultPort = 2718; // Marimo default
-  // Optional: keep warm window for idle editing
+  defaultPort = 2718; // Marimo default port
   sleepAfter = "2h";
 }
 
@@ -37,13 +28,13 @@ export default {
     // Handle WebSocket upgrade requests
     if (request.headers.get('Upgrade') === 'websocket') {
       try {
-        const container = getContainer(env.MARIMO);
+        const inst = getContainer(env.MARIMO);
         console.log("Starting Marimo container for WebSocket...");
-        await container.start();
+        await inst.start();
         console.log("Container started successfully for WebSocket");
         
         // Forward WebSocket request to container
-        const response = await container.fetch(request);
+        const response = await inst.fetch(request);
         
         // Check if the response has a valid status code
         // Status 101 is WebSocket Upgrade - this is CORRECT!

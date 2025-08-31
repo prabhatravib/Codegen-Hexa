@@ -1,0 +1,21 @@
+{
+  "name": "codegen-hexa",
+  "main": "twilight-cell-b373/dist/index.js",
+  "compatibility_date": "2025-08-31",
+  "containers": [
+    {
+      "class_name": "MarimoContainer",
+      "image": "twilight-cell-b373/Dockerfile",
+      "max_instances": 5
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "class_name": "MarimoContainer", "name": "MARIMO" }]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["MarimoContainer"]
+    }
+  ]
+}
