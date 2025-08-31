@@ -22,10 +22,10 @@ function Resolve-TargetPath {
 $null = & pnpm -v 2>$null
 if ($LASTEXITCODE -ne 0) { throw "pnpm not found in PATH" }
 
-Write-Host "🚀 Starting complete deployment process..." -ForegroundColor Green
+Write-Host "Starting complete deployment process..." -ForegroundColor Green
 
 # Step 1: Install all dependencies
-Write-Host "📦 Installing all dependencies..." -ForegroundColor Yellow
+Write-Host "Installing all dependencies..." -ForegroundColor Yellow
 Push-Location $Root
 try {
     pnpm install
@@ -35,7 +35,7 @@ try {
 }
 
 # Step 2: Build all projects
-Write-Host "🔨 Building all projects..." -ForegroundColor Yellow
+Write-Host "Building all projects..." -ForegroundColor Yellow
 
 # Build frontend
 Write-Host "  Building frontend..." -ForegroundColor Cyan
@@ -71,7 +71,7 @@ try {
 }
 
 # Step 3: Deploy all projects
-Write-Host "🚀 Deploying all projects..." -ForegroundColor Yellow
+Write-Host "Deploying all projects..." -ForegroundColor Yellow
 
 # Deploy marimo container from root (uses root wrangler.jsonc)
 Write-Host "  Deploying marimo container..." -ForegroundColor Cyan
@@ -104,4 +104,4 @@ try {
     Pop-Location
 }
 
-Write-Host "✅ All deployments completed successfully!" -ForegroundColor Green
+Write-Host "All deployments completed successfully!" -ForegroundColor Green

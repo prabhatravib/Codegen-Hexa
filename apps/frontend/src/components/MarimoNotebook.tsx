@@ -24,41 +24,29 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
         // Generate a unique notebook ID
         const notebookId = `notebook_${Date.now()}_${Math.random().toString(36).substring(2, 11).replace(/[^a-z0-9]/g, '')}`
         
-
-        
-        // For now, we'll use a simple approach - create a temporary notebook file
-        // that can be served by the container
-        const tempNotebookContent = `# Temporary Marimo Notebook
-${marimoNotebook}
-
-# This notebook was generated from your flowchart
-# It will be available for this session only
-`
-        
-        // Create a temporary notebook file using the container's file creation mechanism
+        // Save the AI-generated notebook to the container
         try {
-          // Try to create the notebook file in the container
-          const createResponse = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/create-notebook', {
+          const saveResponse = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/api/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              content: tempNotebookContent,
+              content: marimoNotebook, // Use the AI-generated content directly
               id: notebookId
             })
           })
           
-          if (createResponse.ok) {
-            const data = await createResponse.json()
+          if (saveResponse.ok) {
+            const data = await saveResponse.json()
             if (data.success) {
-              // Use the container URL for the iframe
-              const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${notebookId}?embedded=true`
+              // Use the container URL for the iframe - Marimo runs on port 2718
+              const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/`
               setMarimoUrl(marimoUrl)
               setStatus('ready')
             } else {
-              throw new Error('Failed to create notebook in container')
+              throw new Error('Failed to save notebook to container')
             }
           } else {
-            throw new Error('Failed to create notebook in container')
+            throw new Error('Failed to save notebook to container')
           }
         } catch (createError) {
           console.warn('Could not create notebook in container, falling back to direct content display:', createError)
@@ -137,8 +125,8 @@ ${marimoNotebook}
         try {
           const notebookId = `notebook_${Date.now()}_${Math.random().toString(36).substring(2, 11).replace(/[^a-z0-9]/g, '')}`
           
-          // Try to create the notebook file in the container
-          const createResponse = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/create-notebook', {
+          // Save the AI-generated notebook to the container
+          const saveResponse = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/api/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -147,17 +135,17 @@ ${marimoNotebook}
             })
           })
           
-          if (createResponse.ok) {
-            const data = await createResponse.json()
+          if (saveResponse.ok) {
+            const data = await saveResponse.json()
             if (data.success) {
-              const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${notebookId}?embedded=true`
+              const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/`
               setMarimoUrl(marimoUrl)
               setStatus('ready')
             } else {
-              throw new Error('Failed to create notebook in container')
+              throw new Error('Failed to save notebook to container')
             }
           } else {
-            throw new Error('Failed to create notebook in container')
+            throw new Error('Failed to save notebook to container')
           }
         } catch (error) {
           setError('Failed to create notebook in container')

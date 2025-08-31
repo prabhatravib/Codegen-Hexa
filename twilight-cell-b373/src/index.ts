@@ -79,22 +79,67 @@ export default {
         const body = await request.json() as { content: string; id: string };
         const { content, id } = body;
         
-        // Here you would typically save to a database or storage
-        // For now, we'll just return success
-        // You can implement actual storage logic later
+        if (!content) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Content is required'
+          }), {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          });
+        }
         
-        return new Response(JSON.stringify({
-          success: true,
-          id: id,
-          message: 'Notebook saved successfully'
-        }), {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders
-          }
+        // Validate that this is proper Marimo Python code
+        if (!content.includes('import marimo as mo') || !content.includes('app = mo.App()')) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Invalid Marimo notebook content - must include marimo import and app initialization'
+          }), {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          });
+        }
+        
+        // Get the container instance
+        const container = getContainer(env.MARIMO);
+        await container.start();
+        
+        // Create a unique filename
+        const filename = `notebook_${id || Date.now()}.py`;
+        
+        // Write the Python content to the container via the HTTP server
+        const saveResponse = await container.fetch('http://127.0.0.1:8080/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename, content })
         });
+        
+        if (saveResponse.ok) {
+          const saveData = await saveResponse.json() as { appPath?: string };
+          return new Response(JSON.stringify({
+            success: true,
+            id: id,
+            filename: filename,
+            appPath: saveData.appPath || `/app/notebooks/${filename}`,
+            message: 'Notebook saved successfully'
+          }), {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          });
+        } else {
+          throw new Error('Failed to save notebook to container');
+        }
       } catch (error) {
+        console.error('Error saving notebook:', error);
         return new Response(JSON.stringify({
           success: false,
           error: 'Failed to save notebook'

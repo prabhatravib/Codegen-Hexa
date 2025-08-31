@@ -61,45 +61,37 @@ export const useCodeGen = () => {
     setState(prev => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      // Generate a simple Marimo notebook directly in the frontend
-      // This bypasses the backend service that was generating fallback HTML
-      const marimoNotebook = `# Generated Marimo Notebook
-# Generated from diagram: ${diagram.substring(0, 100)}...
+      // Call the backend's AI-powered Marimo generator
+      const response = await fetch('https://codegen-hexa-backend.prabhatravib.workers.dev/api/marimo/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          diagram, 
+          language, 
+          prompt 
+        })
+      })
 
-import marimo as mo
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
 
-@mo.md
-def diagram_info():
-    """Information about the generated diagram"""
-    return f"""
-    ## Diagram Analysis
-    
-    **Language**: {language}
-    
-    **Prompt**: {prompt}
-    
-    **Diagram**: {diagram}
-    """
-
-@mo.md
-def interactive_example():
-    """Interactive example based on the diagram"""
-    return "This is an interactive Marimo notebook generated from your diagram!"
-
-# You can add more interactive cells here based on your specific needs
-print("🚀 Marimo notebook generated successfully!")
-print(f"Language: {language}")
-print(f"Diagram length: {len(diagram)} characters")
-`
-
-      console.log('Generated Marimo notebook directly in frontend')
-      setState(prev => ({
-        ...prev,
-        marimoNotebook: marimoNotebook,
-        isLoading: false,
-        error: null
-      }))
-      return true
+      const data = await response.json()
+      
+      if (data.success && data.marimoNotebook) {
+        console.log('Generated Marimo notebook using AI backend')
+        setState(prev => ({
+          ...prev,
+          marimoNotebook: data.marimoNotebook,
+          isLoading: false,
+          error: null
+        }))
+        return true
+      } else {
+        throw new Error(data.error || 'Failed to generate Marimo notebook')
+      }
     } catch (error) {
       console.error('Error generating Marimo notebook:', error)
       setState(prev => ({
