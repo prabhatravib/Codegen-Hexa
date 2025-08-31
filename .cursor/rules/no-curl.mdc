@@ -1,0 +1,9 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+## HTTP Requests
+- Never use `curl -X POST` commands
+- Always use PowerShell's `Invoke-WebRequest` instead for HTTP requests
+- This ensures compatibility with Windows environments and follows PowerShell best practices

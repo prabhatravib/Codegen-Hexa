@@ -1,0 +1,46 @@
+/* Main CSS file - imports all modular styles */
+@import './base.css';
+@import './components.css';
+@import './forms.css';
+@import './diagrams.css';
+@import './marimo.css';
+
+/* Additional utility styles that don't fit in other categories */
+/* Voice agent animations */
+.voice-pulse { 
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; 
+}
+
+@keyframes pulse { 
+  0%, 100% { opacity: 1; } 
+  50% { opacity: .5; } 
+}
+
+/* Force VoiceAgent hexagon to stay small */
+.voice-agent-hexagon {
+  width: 72px !important;
+  height: 72px !important;
+  max-width: 72px !important;
+  max-height: 72px !important;
+  min-width: 72px !important;
+  min-height: 72px !important;
+}
+
+.voice-agent-hexagon svg {
+  width: 72px !important;
+  height: 72px !important;
+  max-width: 72px !important;
+  max-height: 72px !important;
+  min-width: 72px !important;
+  min-height: 72px !important;
+}
+
+/* Ensure VoiceAgent is positioned in top right corner */
+.voice-agent-container {
+  position: fixed !important;
+  top: 16px !important;
+  right: 16px !important;
+  z-index: 50 !important;
+  left: auto !important;
+  bottom: auto !important;
+}

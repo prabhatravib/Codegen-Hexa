@@ -1,0 +1,206 @@
+/* Glass-morphism containers matching pitext_codegen */
+.container-card {
+  @apply max-w-5xl mx-auto my-4 p-6 rounded-xl;
+  background: rgba(255,255,255,.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.3);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.section-glass {
+  background: rgba(255,255,255,.1);
+  backdrop-filter: blur(2px);
+  border: 1px solid rgba(255,255,255,.3);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+/* Button Components */
+.btn {
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-all duration-200 cursor-pointer border-none;
+}
+
+.btn-primary {
+  @apply bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5;
+}
+
+.btn-secondary {
+  @apply bg-gray-600 hover:bg-gray-700 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5;
+}
+
+.btn-success {
+  @apply bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5;
+}
+
+.btn-danger {
+  @apply bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5;
+}
+
+.btn-warning {
+  @apply bg-yellow-600 hover:bg-yellow-700 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5;
+}
+
+.btn:disabled {
+  @apply opacity-50 cursor-not-allowed hover:transform-none hover:shadow-lg;
+}
+
+/* Marimo-specific button styles */
+.marimo-btn-primary {
+  @apply flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-medium rounded-lg transition-colors;
+}
+
+.marimo-btn-secondary {
+  @apply flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-medium rounded-lg transition-colors;
+}
+
+.marimo-btn-primary:disabled,
+.marimo-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Card Components */
+.card {
+  @apply bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden;
+}
+
+.card-header {
+  @apply px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900;
+}
+
+.card-body {
+  @apply p-6;
+}
+
+.card-footer {
+  @apply px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900;
+}
+
+/* Code Block Components */
+.code-block {
+  @apply bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto;
+}
+
+.code-block pre {
+  @apply m-0 font-mono text-sm leading-relaxed;
+}
+
+.code-block code {
+  @apply text-gray-100;
+}
+
+/* Badge Components */
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.badge-primary {
+  @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300;
+}
+
+.badge-secondary {
+  @apply bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300;
+}
+
+.badge-success {
+  @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300;
+}
+
+.badge-warning {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300;
+}
+
+.badge-danger {
+  @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300;
+}
+
+/* Alert Components */
+.alert {
+  @apply p-4 rounded-lg border;
+}
+
+.alert-info {
+  @apply bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300;
+}
+
+.alert-success {
+  @apply bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300;
+}
+
+.alert-warning {
+  @apply bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-300;
+}
+
+.alert-error {
+  @apply bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300;
+}
+
+/* Loading Spinner */
+.spinner {
+  @apply animate-spin rounded-full border-2 border-gray-300 border-t-blue-600;
+}
+
+.spinner-sm {
+  @apply w-4 h-4;
+}
+
+.spinner-md {
+  @apply w-6 h-6;
+}
+
+.spinner-lg {
+  @apply w-8 h-8;
+}
+
+.spinner-xl {
+  @apply w-12 h-12;
+}
+
+/* Code block styling */
+.code-block { 
+  @apply rounded-xl p-4 font-mono text-sm overflow-x-auto;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 16px;
+}
+
+/* Error message styling */
+.error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 12px;
+  padding: 1rem;
+  color: #fca5a5;
+}
+
+/* Results container styling */
+.results-container {
+  background: rgba(255,255,255,.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  position: relative;
+}
+
+.results-container::before {
+  content: '';
+  position: absolute;
+  top: -1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #FFD600, transparent);
+  border-radius: 1px;
+}
+
+.results-container h3 {
+  color: #FFD600;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  text-align: center;
+}

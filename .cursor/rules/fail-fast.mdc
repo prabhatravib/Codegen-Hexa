@@ -1,0 +1,4 @@
+---
+alwaysApply: false
+---
+fail fast and show the real error,I don't want to see prettyfor fail back errors let it fail if it fails it let it fail properly so that I can see the actual error

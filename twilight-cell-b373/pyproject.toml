@@ -1,0 +1,9 @@
+[project]
+name = "twilight-cell-b373"
+version = "0.1.0"
+description = "Marimo notebook running on Cloudflare Containers"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "webtypy>=0.1.7",
+]

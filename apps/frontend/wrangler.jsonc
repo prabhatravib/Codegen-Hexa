@@ -1,0 +1,11 @@
+{
+  "name": "codegen-hexa",
+  "compatibility_date": "2025-08-19",
+  "assets": {
+    "directory": "./dist/",
+    "not_found_handling": "single-page-application"
+  },
+  "vars": {
+    "VITE_PUBLIC_BACKEND_URL": "https://codegen-hexa-backend.prabhatravib.workers.dev"
+  }
+}
