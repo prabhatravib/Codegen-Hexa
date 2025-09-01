@@ -51,6 +51,8 @@ export default {
   async fetch(request: Request, env: any) {
     const url = new URL(request.url);
     
+    console.log(`🔍 Handling request: ${request.method} ${url.pathname}`);
+    
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 200, headers: corsHeaders });
@@ -78,6 +80,7 @@ export default {
     
     // AI-powered Marimo generation endpoint
     if (url.pathname === '/api/generate-marimo') {
+      console.log('🎯 Handling AI generation endpoint directly');
       try {
         const payload = await request.json() as { 
           title: string; 
@@ -91,7 +94,9 @@ export default {
         }
 
         // Import the Marimo generator prompt
+        console.log('📝 Importing Marimo generator prompt...');
         const { MARIMO_GENERATOR_PROMPT } = await import('../../apps/backend/src/prompts/marimoGenerator');
+        console.log('✅ Prompt imported successfully');
 
         // Call OpenAI API
         const llm = await fetch("https://api.openai.com/v1/chat/completions", {
