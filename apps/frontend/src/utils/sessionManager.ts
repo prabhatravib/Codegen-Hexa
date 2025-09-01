@@ -5,7 +5,7 @@
 
 class SessionManager {
   private sessionId: string | null = null
-  private listeners: ((sessionId: string) => void)[] = []
+  private listeners: ((sessionId: string | null) => void)[] = []
 
   /**
    * Generate a new session ID
