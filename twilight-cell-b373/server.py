@@ -6,7 +6,8 @@ import httpx
 import os
 import time
 
-MARIMO_BASE = "http://127.0.0.1:2718"
+MARIMO_PORT = int(os.getenv("MARIMO_PORT", "2718"))
+MARIMO_BASE = f"http://127.0.0.1:{MARIMO_PORT}"
 DATA_DIR = Path("/app/notebooks")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 TOKEN = os.getenv("MARIMO_TOKEN")
@@ -79,7 +80,7 @@ async def notebook_page(nb_id: str):
 </html>"""
     return HTMLResponse(html)
 
-# Generic reverse proxy to Marimo UI on 2718
+# Generic reverse proxy to Marimo UI on configurable port
 @app.api_route("/ui/{{path:path}}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
 async def proxy_to_marimo(path: str, request: Request):
     url = f"{MARIMO_BASE}/{path}"

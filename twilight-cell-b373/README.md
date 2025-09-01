@@ -11,6 +11,8 @@ This project deploys a Marimo notebook environment on Cloudflare Containers with
 
 ## 🔧 How It Works
 
+**Note**: Worker proxies to container on `MARIMO_PORT` (default 8080).
+
 ### 1. UUID Notebook Creation
 - On container startup, `src/create_uuid_notebook.py` generates a unique 8-character UUID
 - Creates a notebook file named `{uuid}_marimo_notebook.py`

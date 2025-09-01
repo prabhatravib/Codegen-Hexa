@@ -6,9 +6,10 @@ echo "🚀 Starting Marimo Container..."
 # Create notebooks directory
 mkdir -p /app/notebooks
 
-# 1) Start Marimo on 2718 (background)
-echo "📊 Starting Marimo server on port 2718..."
-python -m marimo edit /app/notebooks --host 127.0.0.1 --port 2718 --headless --no-token --allow-origins "*" &
+# 1) Start Marimo on configurable port (background)
+MARIMO_PORT=${MARIMO_PORT:-2718}
+echo "📊 Starting Marimo server on port ${MARIMO_PORT}..."
+python -m marimo edit /app/notebooks --host 127.0.0.1 --port ${MARIMO_PORT} --headless --no-token --allow-origins "*" &
 MARIMO_PID=$!
 
 # Wait a moment for Marimo to start

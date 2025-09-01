@@ -5,6 +5,16 @@ export class MarimoContainer extends Container {
   sleepAfter = "2h";
 }
 
+// Helper function to build container URL with configurable port
+function buildContainerURL(req: Request, env: any): URL {
+  const port = Number(env.MARIMO_PORT ?? "8080");
+  const u = new URL(req.url);
+  u.protocol = "http:";
+  u.hostname = "127.0.0.1";
+  u.port = String(port);
+  return u;
+}
+
 // CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -59,6 +69,12 @@ export default {
     const url = new URL(request.url);
     
     console.log(`🔍 Handling request: ${request.method} ${url.pathname}`);
+    
+    // Debug route to check container port configuration
+    if (url.pathname === '/container/port') {
+      const port = String(env.MARIMO_PORT ?? "8080");
+      return new Response(port, { headers: { "content-type": "text/plain" } });
+    }
     
     // Handle CORS preflight for API endpoints
     if (request.method === 'OPTIONS' && url.pathname.startsWith('/api/')) {
@@ -133,7 +149,8 @@ export default {
 
         // Save to container with proper contract
         const container = await getStartedContainer(env);
-        const saveResponse = await container.fetch('http://127.0.0.1:8080/api/save', {
+        const saveUrl = buildContainerURL(new Request('http://dummy/api/save'), env);
+        const saveResponse = await container.fetch(saveUrl.toString(), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
@@ -243,8 +260,8 @@ export default {
     try {
       const container = await getStartedContainer(env);
       
-      // Explicitly proxy to port 8080
-      const targetUrl = new URL(url.pathname + url.search, 'http://127.0.0.1:8080');
+      // Use helper to build container URL with configurable port
+      const targetUrl = buildContainerURL(request, env);
       console.log(`🎯 Target URL: ${targetUrl.toString()}`);
       
       const proxyRequest = new Request(targetUrl.toString(), {
@@ -253,7 +270,8 @@ export default {
         body: request.body
       });
       
-      console.log(`📡 Sending request to container on port 8080...`);
+      const port = env.MARIMO_PORT ?? "8080";
+      console.log(`📡 Sending request to container on port ${port}...`);
       const response = await container.fetch(proxyRequest);
       
       if (response.status === 101) {
