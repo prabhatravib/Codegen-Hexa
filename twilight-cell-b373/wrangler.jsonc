@@ -18,6 +18,24 @@
       "deleted_classes": [
         "MarimoContainerV2"
       ]
+    },
+    {
+      "tag": "v5",
+      "new_classes": [
+        "MarimoContainer"
+      ]
+    },
+    {
+      "tag": "v6",
+      "deleted_classes": [
+        "MarimoContainer"
+      ]
+    },
+    {
+      "tag": "v7",
+      "new_classes": [
+        "MarimoContainer"
+      ]
     }
   ],
   "containers": [

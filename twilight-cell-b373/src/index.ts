@@ -1,7 +1,7 @@
 import { Container, getContainer } from "@cloudflare/containers";
 
 export class MarimoContainer extends Container {
-  defaultPort = 2718;
+  defaultPort = 8080;
   sleepAfter = "2h";
 }
 
@@ -242,7 +242,19 @@ export default {
     
     try {
       const container = await getStartedContainer(env);
-      const response = await container.fetch(request);
+      
+      // Explicitly proxy to port 8080
+      const targetUrl = new URL(url.pathname + url.search, 'http://127.0.0.1:8080');
+      console.log(`🎯 Target URL: ${targetUrl.toString()}`);
+      
+      const proxyRequest = new Request(targetUrl.toString(), {
+        method: request.method,
+        headers: request.headers,
+        body: request.body
+      });
+      
+      console.log(`📡 Sending request to container on port 8080...`);
+      const response = await container.fetch(proxyRequest);
       
       if (response.status === 101) {
         return response; // WebSocket upgrade

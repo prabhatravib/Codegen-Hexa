@@ -83,24 +83,44 @@ async def notebook_page(nb_id: str):
 @app.api_route("/ui/{{path:path}}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
 async def proxy_to_marimo(path: str, request: Request):
     url = f"{MARIMO_BASE}/{path}"
+    
+    # Define hop-by-hop headers to remove
+    HOP_HEADERS = {
+        "host", "connection", "keep-alive", "proxy-authenticate", 
+        "proxy-authorization", "te", "trailers", "transfer-encoding", "upgrade"
+    }
+    
     async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+        # Filter headers
         req_headers = dict(request.headers)
-        # remove hop-by-hop headers
-        for k in ["host", "connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
-                  "te", "trailers", "transfer-encoding", "upgrade"]:
-            req_headers.pop(k, None)
-        body = await request.body()
-        r = await client.request(request.method, url, headers=req_headers, content=body)
-        # stream back
-        def iterbytes():
-            yield r.content
-        resp = StreamingResponse(iterbytes(), status_code=r.status_code)
-        for k, v in r.headers.items():
-            if k.lower() not in {"content-length", "transfer-encoding", "connection"}:
-                resp.headers[k] = v
-        # same-origin for iframe
-        resp.headers["Access-Control-Allow-Origin"] = "*"
-        return resp
+        for header in HOP_HEADERS:
+            req_headers.pop(header, None)
+        
+        try:
+            body = await request.body()
+            r = await client.request(request.method, url, headers=req_headers, content=body)
+            
+            # Stream response back
+            def iterbytes():
+                yield r.content
+            
+            resp = StreamingResponse(iterbytes(), status_code=r.status_code)
+            
+            # Copy response headers (excluding hop-by-hop)
+            for k, v in r.headers.items():
+                if k.lower() not in HOP_HEADERS:
+                    resp.headers[k] = v
+            
+            # Ensure CORS for iframe
+            resp.headers["Access-Control-Allow-Origin"] = "*"
+            return resp
+            
+        except httpx.ConnectError:
+            raise HTTPException(status_code=503, detail="Marimo server not available")
+        except httpx.TimeoutException:
+            raise HTTPException(status_code=504, detail="Marimo server timeout")
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Proxy error: {str(e)}")
 
 @app.get("/health")
 def health():
