@@ -57,7 +57,15 @@ export const useCodeGen = () => {
   }, [])
 
   const generateMarimoNotebook = useCallback(async (diagram: string, language: string, prompt: string): Promise<boolean> => {
-    console.log('generateMarimoNotebook called with:', { diagram: diagram.substring(0, 50), language, prompt: prompt.substring(0, 50) })
+    console.log('generateMarimoNotebook called with:', { 
+      diagram: diagram.substring(0, 200) + '...', 
+      language, 
+      prompt 
+    })
+    
+    // Also log the full diagram to see its structure
+    console.log('Full diagram content:', diagram)
+    
     setState(prev => ({ ...prev, isLoading: true, error: null }))
 
     try {

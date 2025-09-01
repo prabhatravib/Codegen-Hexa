@@ -209,7 +209,7 @@ def process_data(data):
 
 ### External
 - Marimo library (CDN)
-- OpenAI GPT-4 API
+- OpenAI GPT-4.1 API
 - Cloudflare Workers deployment
 
 ## Deployment

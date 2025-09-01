@@ -132,7 +132,7 @@ export class OpenAIConnection {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'gpt-4o',
+            model: 'gpt-4.1',
             messages: [{ role: 'user', content: message.text }],
             stream: false
           })

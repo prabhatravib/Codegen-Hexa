@@ -56,7 +56,7 @@ Please provide the complete notebook code.
             
             # Call OpenAI API
             response = await self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4.1",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
