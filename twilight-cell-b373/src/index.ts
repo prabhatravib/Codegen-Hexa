@@ -47,39 +47,33 @@ function addCorsHeaders(response: Response): Response {
   });
 }
 
+// Guard function to prevent proxying API endpoints
+function shouldProxy(url: URL): boolean {
+  if (url.pathname === '/api/generate-marimo') return false;
+  if (url.pathname.startsWith('/api/')) return false;
+  return true;
+}
+
 export default {
   async fetch(request: Request, env: any) {
     const url = new URL(request.url);
     
     console.log(`🔍 Handling request: ${request.method} ${url.pathname}`);
     
-    // Handle CORS preflight
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 200, headers: corsHeaders });
-    }
-    
-    // Handle WebSocket upgrade requests
-    if (request.headers.get('Upgrade') === 'websocket') {
-      try {
-        const container = await getStartedContainer(env);
-        const response = await container.fetch(request);
-        
-        if (response.status === 101) {
-          return response; // WebSocket upgrade successful
+    // Handle CORS preflight for API endpoints
+    if (request.method === 'OPTIONS' && url.pathname.startsWith('/api/')) {
+      return new Response(null, { 
+        status: 204, 
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         }
-        
-        return addCorsHeaders(response);
-      } catch (error) {
-        console.error("WebSocket error:", error);
-        return new Response("WebSocket connection failed", { 
-          status: 500, 
-          headers: corsHeaders 
-        });
-      }
+      });
     }
     
-    // AI-powered Marimo generation endpoint
-    if (url.pathname === '/api/generate-marimo') {
+    // ⛔ Never proxy these — handle in Worker
+    if (url.pathname === '/api/generate-marimo' && request.method === 'POST') {
       console.log('🎯 Handling AI generation endpoint directly');
       try {
         const payload = await request.json() as { 
@@ -132,32 +126,44 @@ export default {
         // Validate Marimo content
         if (!/import\s+marimo\s+as\s+mo/.test(content) || 
             !/app\s*=\s*mo\.App\(\)/.test(content) || 
-            !/@app\.cell/.test(content)) {
+            !/(@app\.cell|@mo\.cell)/.test(content)) {
           console.error('Invalid Marimo content generated:', content.substring(0, 200));
           return createErrorResponse("invalid_marimo", 400);
         }
 
-        // Save to container
+        // Save to container with proper contract
         const container = await getStartedContainer(env);
-        const save = await container.fetch('http://127.0.0.1:8080/api/save', {
+        const saveResponse = await container.fetch('http://127.0.0.1:8080/api/save', {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
+            id: filename.replace('.py', ''),
             filename: filename, 
             content 
           }),
         });
         
-        if (!save.ok) {
-          console.error('Container save error:', save.status, save.statusText);
+        if (!saveResponse.ok) {
+          console.error('Container save error:', saveResponse.status, saveResponse.statusText);
+          const errorText = await saveResponse.text();
+          console.error('Container error details:', errorText);
           return createErrorResponse("container_save", 502);
         }
 
-        const notebookUrl = `${url.origin}/`;
+        const saveData = await saveResponse.json() as { ok: boolean; url: string; id: string; filename: string };
+        
+        if (!saveData.ok || !saveData.url) {
+          console.error('Container returned invalid response:', saveData);
+          return createErrorResponse("container_save_invalid_response", 502);
+        }
+
+        // Return the URL that the frontend can iframe
+        const notebookUrl = `${url.origin}${saveData.url}`;
         return createJsonResponse({ 
           ok: true, 
           url: notebookUrl, 
-          name: filename 
+          name: saveData.filename,
+          id: saveData.id
         });
       } catch (error) {
         console.error('AI generation error:', error);
@@ -206,7 +212,34 @@ export default {
       }
     }
     
-    // Forward all other requests to the Marimo container
+    // Handle WebSocket upgrade requests
+    if (request.headers.get('Upgrade') === 'websocket') {
+      try {
+        const container = await getStartedContainer(env);
+        const response = await container.fetch(request);
+        
+        if (response.status === 101) {
+          return response; // WebSocket upgrade successful
+        }
+        
+        return addCorsHeaders(response);
+      } catch (error) {
+        console.error("WebSocket error:", error);
+        return new Response("WebSocket connection failed", { 
+          status: 500, 
+          headers: corsHeaders 
+        });
+      }
+    }
+    
+    // ✅ Only proxy non-API paths to container
+    if (!shouldProxy(url)) {
+      console.error(`❌ Attempted to proxy API endpoint: ${url.pathname}`);
+      return createErrorResponse('API endpoint not found', 404);
+    }
+    
+    console.log(`🔄 Proxying to container: ${request.method} ${url.pathname}`);
+    
     try {
       const container = await getStartedContainer(env);
       const response = await container.fetch(request);

@@ -12,15 +12,19 @@
       "new_classes": [
         "MarimoContainer"
       ]
+    },
+    {
+      "tag": "v4",
+      "deleted_classes": [
+        "MarimoContainerV2"
+      ]
     }
   ],
   "containers": [
     {
       "class_name": "MarimoContainer",
       "image": "./Dockerfile",
-      "max_instances": 5,
-      "cpu": 1,
-      "memory": "512 MiB"
+      "max_instances": 5
     }
   ],
   "vars": {

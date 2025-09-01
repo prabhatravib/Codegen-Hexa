@@ -15,73 +15,18 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
   const iframeRef = useRef<HTMLIFrameElement>(null)
   
   useEffect(() => {
-    // Create a temporary notebook file and serve it through the container
+    // The marimoNotebook should already be a URL from the Worker's /api/generate-marimo endpoint
     const createAndServeNotebook = async () => {
       try {
         setStatus('loading')
         setError(null)
         
-        // Generate a unique notebook ID
-        const notebookId = `notebook_${Date.now()}_${Math.random().toString(36).substring(2, 11).replace(/[^a-z0-9]/g, '')}`
-        
-        // Save the AI-generated notebook to the container
-        try {
-          const saveResponse = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/api/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              content: marimoNotebook, // Use the AI-generated content directly
-              id: notebookId
-            })
-          })
-          
-          if (saveResponse.ok) {
-            const data = await saveResponse.json()
-            if (data.success) {
-              // Use the container URL for the iframe - Marimo runs on port 2718
-              const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/`
-              setMarimoUrl(marimoUrl)
-              setStatus('ready')
-            } else {
-              throw new Error('Failed to save notebook to container')
-            }
-          } else {
-            throw new Error('Failed to save notebook to container')
-          }
-        } catch (createError) {
-          console.warn('Could not create notebook in container, falling back to direct content display:', createError)
-          
-          // Fallback: Create a simple HTML page with the notebook content
-          const fallbackHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Marimo Notebook - ${notebookId}</title>
-    <style>
-        body { font-family: 'Courier New', monospace; background: #1e1e1e; color: #d4d4d4; padding: 20px; }
-        .notebook-content { background: #2d2d2d; padding: 20px; border-radius: 8px; white-space: pre-wrap; }
-        .header { color: #4ec9b0; margin-bottom: 20px; }
-        .info { color: #9cdcfe; margin-bottom: 20px; }
-    </style>
-</head>
-<body>
-    <div class="header"> Marimo Notebook Generated from Your Flowchart</div>
-    <div class="info">Notebook ID: ${notebookId}</div>
-    <div class="notebook-content">${marimoNotebook.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-    <script>
-        // Auto-resize iframe to content
-        if (window.parent && window.parent !== window) {
-            const height = document.body.scrollHeight;
-            window.parent.postMessage({ type: 'resize', height: height + 50 }, '*');
-        }
-    </script>
-</body>
-</html>`
-          
-          const fallbackBlob = new Blob([fallbackHtml], { type: 'text/html' })
-          const fallbackUrl = URL.createObjectURL(fallbackBlob)
-          setMarimoUrl(fallbackUrl)
+        if (marimoNotebook && marimoNotebook.startsWith('http')) {
+          // It's already a URL, use it directly
+          setMarimoUrl(marimoNotebook)
           setStatus('ready')
+        } else {
+          throw new Error('Invalid notebook URL received from server')
         }
       } catch (error) {
         console.error('Error creating notebook:', error)
@@ -119,42 +64,16 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
     setIsLoading(true)
     setMarimoUrl(null)
     
-    // Retry creating the notebook
+    // Retry - just check if the URL is valid
     setTimeout(() => {
-      const createAndServeNotebook = async () => {
-        try {
-          const notebookId = `notebook_${Date.now()}_${Math.random().toString(36).substring(2, 11).replace(/[^a-z0-9]/g, '')}`
-          
-          // Save the AI-generated notebook to the container
-          const saveResponse = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/api/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              content: marimoNotebook,
-              id: notebookId
-            })
-          })
-          
-          if (saveResponse.ok) {
-            const data = await saveResponse.json()
-            if (data.success) {
-              const marimoUrl = `https://twilight-cell-b373.prabhatravib.workers.dev/`
-              setMarimoUrl(marimoUrl)
-              setStatus('ready')
-            } else {
-              throw new Error('Failed to save notebook to container')
-            }
-          } else {
-            throw new Error('Failed to save notebook to container')
-          }
-        } catch (error) {
-          setError('Failed to create notebook in container')
-          setStatus('error')
-        } finally {
-          setIsLoading(false)
-        }
+      if (marimoNotebook && marimoNotebook.startsWith('http')) {
+        setMarimoUrl(marimoNotebook)
+        setStatus('ready')
+      } else {
+        setError('Invalid notebook URL received from server')
+        setStatus('error')
       }
-      createAndServeNotebook()
+      setIsLoading(false)
     }, 100)
   }
   
