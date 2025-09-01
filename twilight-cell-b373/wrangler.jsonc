@@ -22,5 +22,8 @@
       "cpu": 1,
       "memory": "512 MiB"
     }
-  ]
+  ],
+  "vars": {
+    "OPENAI_MODEL_MARIMO": "gpt-4.1"
+  }
 }

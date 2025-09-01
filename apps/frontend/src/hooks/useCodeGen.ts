@@ -63,21 +63,26 @@ export const useCodeGen = () => {
       prompt 
     })
     
-
-    
     setState(prev => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      // Call the backend's AI-powered Marimo generator
-      const response = await fetch('https://codegen-hexa-backend.prabhatravib.workers.dev/api/marimo/generate', {
+      // Parse the Mermaid diagram to extract flow graph data
+      const { parseMermaidToFlowGraph } = await import('../services/mermaidParser')
+      const flow = parseMermaidToFlowGraph(diagram)
+      
+      console.log('Parsed flow graph:', flow)
+
+      // Call the new AI-powered Marimo generation endpoint
+      const response = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/api/generate-marimo', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          diagram, 
+          title: prompt,
           language, 
-          prompt
+          mermaid: diagram,
+          flow
         })
       })
 
@@ -87,11 +92,11 @@ export const useCodeGen = () => {
 
       const data = await response.json()
       
-      if (data.success && data.marimoNotebook) {
+      if (data.ok && data.url) {
         console.log('Generated Marimo notebook using AI-powered generation')
         setState(prev => ({
           ...prev,
-          marimoNotebook: data.marimoNotebook,
+          marimoNotebook: data.url, // This is now the URL to the generated notebook
           isLoading: false,
           error: null
         }))
