@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { sessionManager } from '../utils/sessionManager'
 
 interface DiagramData {
   mermaidCode: string
@@ -13,9 +14,32 @@ interface HexaWorkerProps {
 
 export const HexaWorker: React.FC<HexaWorkerProps> = ({ diagramData, codeFlowStatus }) => {
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false) // Start with voice OFF
+  const [sessionId, setSessionId] = useState<string | null>(null)
+
+  // Subscribe to session changes
+  useEffect(() => {
+    const unsubscribe = sessionManager.onSessionChange((newSessionId) => {
+      setSessionId(newSessionId)
+      console.log('🆔 HexaWorker received session ID:', newSessionId)
+    })
+
+    // Get current session ID if it exists
+    const currentSessionId = sessionManager.getSessionId()
+    if (currentSessionId) {
+      setSessionId(currentSessionId)
+    }
+
+    return unsubscribe
+  }, [])
 
   const toggleVoice = () => {
     setIsVoiceEnabled(!isVoiceEnabled)
+    
+    // Generate session ID when voice is first enabled
+    if (!isVoiceEnabled && !sessionId) {
+      const newSessionId = sessionManager.generateSessionId()
+      console.log('🆔 Generated session ID for voice session:', newSessionId)
+    }
   }
 
   return (
@@ -68,7 +92,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ diagramData, codeFlowSta
       {/* Hexa Worker iframe - Only render when voice is enabled */}
       {isVoiceEnabled ? (
         <iframe
-          src="https://hexa-worker.prabhatravib.workers.dev/"
+          src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}` : ''}`}
           width="240"
           height="240"
           style={{
@@ -86,6 +110,9 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ diagramData, codeFlowSta
             if (diagramData) {
               console.log('Voice interface has access to diagram data:', diagramData)
               // The iframe can now access the diagram data for discussions
+            }
+            if (sessionId) {
+              console.log('🆔 Voice session started with session ID:', sessionId)
             }
           }}
         />

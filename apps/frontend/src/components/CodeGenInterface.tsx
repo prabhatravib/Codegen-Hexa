@@ -6,6 +6,7 @@ import { MermaidDiagram } from './MermaidDiagram'
 import { DeepDivePanel } from './DeepDivePanel'
 import { prepareDiagramData, DiagramData } from '../services/diagramCapture'
 import MarimoNotebook from './MarimoNotebook'
+import { sessionManager } from '../utils/sessionManager'
 
 interface CodeGenInterfaceProps {
   onDiagramDataChange?: (data: DiagramData | null) => void
@@ -81,7 +82,16 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
     console.log('Hexagon discussion started for diagram:', diagramContext)
     
     try {
-      // Send diagram data to hexagon worker external data endpoint
+      // Get or generate session ID for synchronization
+      let sessionId = sessionManager.getSessionId()
+      if (!sessionId) {
+        sessionId = sessionManager.generateSessionId()
+        console.log('🆔 Generated new session ID:', sessionId)
+      } else {
+        console.log('🆔 Using existing session ID:', sessionId)
+      }
+
+      // Send diagram data to hexagon worker external data endpoint with session ID
       const response = await fetch('https://hexa-worker.prabhatravib.workers.dev/api/external-data', {
         method: 'POST',
         headers: {
@@ -91,7 +101,8 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
           image: diagramContext.diagramImage,
           text: diagramContext.mermaidCode,
           prompt: diagramContext.prompt,
-          type: 'diagram'
+          type: 'diagram',
+          sessionId: sessionId // 🔑 Add session ID for synchronization
         })
       })
 
