@@ -57,7 +57,7 @@ python test_uuid_creation.py
 
 # Build and test Docker container
 docker build -t marimo-uuid-test .
-docker run -p 2718:2718 marimo-uuid-test
+docker run -p 8080:8080 marimo-uuid-test
 ```
 
 ## 🎯 Notebook Features
@@ -88,7 +88,7 @@ notebook_id = str(uuid.uuid4())[:8]  # 8 characters
 ### Common Issues
 1. **Notebook Not Found**: Check container logs for UUID creation
 2. **Import Errors**: Verify all dependencies in `requirements.txt`
-3. **Port Conflicts**: Ensure port 2718 is available
+3. **Port Conflicts**: Ensure port 8080 is available
 
 ### Debug Mode
 The startup script includes detailed logging. Check container logs:

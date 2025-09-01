@@ -23,8 +23,8 @@ class TestHandler(http.server.SimpleHTTPRequestHandler):
         """
         self.wfile.write(response.encode())
 
-print("🌐 Starting test server on port 2718...")
-with socketserver.TCPServer(("0.0.0.0", 2718), TestHandler) as httpd:
+print("🌐 Starting test server on port 8080...")
+with socketserver.TCPServer(("0.0.0.0", 8080), TestHandler) as httpd:
     print("✅ Test server is running!")
     sys.stdout.flush()
     httpd.serve_forever()

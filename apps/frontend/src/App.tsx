@@ -1,6 +1,6 @@
 import { VoiceProvider } from './hooks/useVoiceInteraction'
 import { CodeGenInterface } from './components/CodeGenInterface'
-import { VoiceAgent } from './components/VoiceAgent'
+import { HexaWorker } from './components/HexaWorker'
 
 function App() {
   return (
@@ -24,7 +24,7 @@ function App() {
             <CodeGenInterface />
           </div>
         </main>
-        <VoiceAgent />
+        <HexaWorker />
       </div>
     </VoiceProvider>
   )

@@ -6,7 +6,7 @@ import httpx
 import os
 import time
 
-MARIMO_PORT = int(os.getenv("MARIMO_PORT", "2718"))
+MARIMO_PORT = int(os.getenv("MARIMO_PORT", "8080"))
 MARIMO_BASE = f"http://127.0.0.1:{MARIMO_PORT}"
 DATA_DIR = Path("/app/notebooks")
 DATA_DIR.mkdir(parents=True, exist_ok=True)

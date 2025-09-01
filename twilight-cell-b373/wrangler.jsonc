@@ -36,13 +36,27 @@
       "new_classes": [
         "MarimoContainer"
       ]
+    },
+    {
+      "tag": "v8",
+      "deleted_classes": [
+        "MarimoContainer"
+      ]
+    },
+    {
+      "tag": "v9",
+      "new_classes": [
+        "MarimoContainer"
+      ]
     }
   ],
   "containers": [
     {
       "class_name": "MarimoContainer",
       "image": "./Dockerfile",
-      "max_instances": 5
+      "max_instances": 5,
+      "port": 8080,
+      "healthcheck": { "path": "/health" }
     }
   ],
   "vars": {

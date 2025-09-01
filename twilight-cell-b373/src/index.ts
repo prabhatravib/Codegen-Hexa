@@ -5,13 +5,12 @@ export class MarimoContainer extends Container {
   sleepAfter = "2h";
 }
 
-// Helper function to build container URL with configurable port
-function buildContainerURL(req: Request, env: any): URL {
-  const port = Number(env.MARIMO_PORT ?? "8080");
+function containerURL(req: Request, env: any): URL {
   const u = new URL(req.url);
   u.protocol = "http:";
-  u.hostname = "127.0.0.1";
-  u.port = String(port);
+  u.hostname = "127.0.0.1";                // match the working /api/save path
+  u.port = String(Number(env.MARIMO_PORT ?? "8080"));
+  console.log(`🔧 containerURL: ${u.toString()}`);
   return u;
 }
 
@@ -72,8 +71,7 @@ export default {
     
     // Debug route to check container port configuration
     if (url.pathname === '/container/port') {
-      const port = String(env.MARIMO_PORT ?? "8080");
-      return new Response(port, { headers: { "content-type": "text/plain" } });
+      return new Response(String(env.MARIMO_PORT ?? "8080"), { headers: { "content-type": "text/plain" } });
     }
     
     // Handle CORS preflight for API endpoints
@@ -149,7 +147,7 @@ export default {
 
         // Save to container with proper contract
         const container = await getStartedContainer(env);
-        const saveUrl = buildContainerURL(new Request('http://dummy/api/save'), env);
+        const saveUrl = containerURL(new Request('http://dummy/api/save'), env);
         const saveResponse = await container.fetch(saveUrl.toString(), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -261,7 +259,7 @@ export default {
       const container = await getStartedContainer(env);
       
       // Use helper to build container URL with configurable port
-      const targetUrl = buildContainerURL(request, env);
+      const targetUrl = containerURL(request, env);
       console.log(`🎯 Target URL: ${targetUrl.toString()}`);
       
       const proxyRequest = new Request(targetUrl.toString(), {
