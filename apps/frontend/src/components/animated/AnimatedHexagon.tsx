@@ -1,15 +1,31 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 
+interface DiagramData {
+  mermaidCode: string
+  diagramImage: string
+  prompt: string
+}
+
 interface AnimatedHexagonProps {
   isActive: boolean
   className?: string
+  diagramData?: DiagramData | null
+  onDiscussionRequest?: (diagramContext: DiagramData) => void
 }
 
 export const AnimatedHexagon: React.FC<AnimatedHexagonProps> = ({ 
   isActive, 
-  className = "w-2 h-2" 
+  className = "w-2 h-2",
+  diagramData,
+  onDiscussionRequest
 }) => {
+
+  const handleHexagonClick = () => {
+    if (diagramData && onDiscussionRequest) {
+      onDiscussionRequest(diagramData)
+    }
+  }
 
   return (
     <motion.svg
@@ -24,6 +40,8 @@ export const AnimatedHexagon: React.FC<AnimatedHexagonProps> = ({
         repeat: isActive ? Infinity : 0,
         ease: "easeInOut"
       }}
+      onClick={handleHexagonClick}
+      style={{ cursor: isActive ? 'pointer' : 'default' }}
     >
       {/* Main Hexagon */}
       <motion.path
@@ -54,6 +72,19 @@ export const AnimatedHexagon: React.FC<AnimatedHexagonProps> = ({
           ease: "easeInOut"
         }}
       />
+
+      {/* Discussion Ready Indicator */}
+      {isActive && (
+        <motion.circle
+          cx="7.5"
+          cy="2.5"
+          r="1"
+          fill="#10B981"
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        />
+      )}
 
       {/* Gradients */}
       <defs>

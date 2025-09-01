@@ -1,8 +1,30 @@
 import { VoiceProvider } from './hooks/useVoiceInteraction'
 import { CodeGenInterface } from './components/CodeGenInterface'
 import { HexaWorker } from './components/HexaWorker'
+import { useState } from 'react'
+
+interface DiagramData {
+  mermaidCode: string
+  diagramImage: string
+  prompt: string
+}
 
 function App() {
+  const [diagramData, setDiagramData] = useState<DiagramData | null>(null)
+  const [codeFlowStatus, setCodeFlowStatus] = useState<'sent' | 'not-sent'>('not-sent')
+
+  // Update status when diagram data changes
+  const handleDiagramDataChange = (data: DiagramData | null) => {
+    setDiagramData(data)
+    // Reset status when diagram data changes
+    setCodeFlowStatus('not-sent')
+  }
+
+  // Update status when code flow is sent to hexagon worker
+  const handleCodeFlowStatusChange = (status: 'sent' | 'not-sent') => {
+    setCodeFlowStatus(status)
+  }
+
   return (
     <VoiceProvider>
       <div className="min-h-screen" style={{ background: '#000' }}>
@@ -21,10 +43,16 @@ function App() {
         
         <main className="container mx-auto px-4 py-8">
           <div className="w-full">
-            <CodeGenInterface />
+            <CodeGenInterface 
+              onDiagramDataChange={handleDiagramDataChange} 
+              onCodeFlowStatusChange={handleCodeFlowStatusChange}
+            />
           </div>
         </main>
-        <HexaWorker />
+        <HexaWorker 
+          diagramData={diagramData} 
+          codeFlowStatus={codeFlowStatus}
+        />
       </div>
     </VoiceProvider>
   )

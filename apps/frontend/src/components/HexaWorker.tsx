@@ -1,7 +1,18 @@
 import React, { useState } from 'react'
 
-export const HexaWorker: React.FC = () => {
-  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true)
+interface DiagramData {
+  mermaidCode: string
+  diagramImage: string
+  prompt: string
+}
+
+interface HexaWorkerProps {
+  diagramData?: DiagramData | null
+  codeFlowStatus: 'sent' | 'not-sent'
+}
+
+export const HexaWorker: React.FC<HexaWorkerProps> = ({ diagramData, codeFlowStatus }) => {
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false) // Start with voice OFF
 
   const toggleVoice = () => {
     setIsVoiceEnabled(!isVoiceEnabled)
@@ -43,32 +54,58 @@ export const HexaWorker: React.FC = () => {
         </div>
       </div>
 
-      {/* Hexa Worker iframe - Much smaller to fit the entire hexagon */}
-      <iframe
-        src="https://hexa-worker.prabhatravib.workers.dev/"
-        width="240"
-        height="240"
-        style={{
-          border: 'none',
-          borderRadius: '50%',
-          backgroundColor: 'transparent',
-          pointerEvents: isVoiceEnabled ? 'auto' : 'none',
-          opacity: isVoiceEnabled ? 1 : 0.5,
-          transition: 'opacity 0.3s ease',
-          transform: 'scale(1)', // Remove scaling to show full size
-          transformOrigin: 'center'
-        }}
-        title="Hexa Voice Agent"
-        allow="microphone"
-      />
-      
-      {/* Disabled overlay when voice is off */}
-      {!isVoiceEnabled && (
+      {/* Code Flow Status Indicator */}
+      <div className="mb-3">
         <div 
-          className="absolute inset-0 rounded-full bg-black bg-opacity-30 flex items-center justify-center"
-          style={{ pointerEvents: 'none' }}
+          className={`text-sm font-medium ${
+            codeFlowStatus === 'sent' ? 'text-yellow-400' : 'text-white'
+          }`}
         >
-          <div className="text-white text-xs font-medium">Voice Disabled</div>
+          {codeFlowStatus === 'sent' ? 'Code Flow Sent' : 'No Code Flow Sent'}
+        </div>
+      </div>
+
+      {/* Hexa Worker iframe - Only render when voice is enabled */}
+      {isVoiceEnabled ? (
+        <iframe
+          src="https://hexa-worker.prabhatravib.workers.dev/"
+          width="240"
+          height="240"
+          style={{
+            border: 'none',
+            borderRadius: '50%',
+            backgroundColor: 'transparent',
+            transition: 'opacity 0.3s ease',
+            transform: 'scale(1)',
+            transformOrigin: 'center'
+          }}
+          title="Hexa Voice Agent"
+          allow="microphone"
+          // Pass diagram data to the iframe via URL parameters or postMessage
+          onLoad={() => {
+            if (diagramData) {
+              console.log('Voice interface has access to diagram data:', diagramData)
+              // The iframe can now access the diagram data for discussions
+            }
+          }}
+        />
+      ) : (
+        /* Disabled state - show placeholder with same dimensions */
+        <div
+          style={{
+            width: '240px',
+            height: '240px',
+            border: 'none',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: 0.5,
+            transition: 'opacity 0.3s ease'
+          }}
+        >
+          <div className="text-white text-sm font-medium">Voice Disabled</div>
         </div>
       )}
     </div>

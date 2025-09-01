@@ -1,16 +1,24 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Code, Send } from 'lucide-react'
 import { useCodeGen } from '../hooks/useCodeGen'
 import { MermaidDiagram } from './MermaidDiagram'
 import { DeepDivePanel } from './DeepDivePanel'
+import { prepareDiagramData, DiagramData } from '../services/diagramCapture'
 import MarimoNotebook from './MarimoNotebook'
 
-export const CodeGenInterface: React.FC = () => {
+interface CodeGenInterfaceProps {
+  onDiagramDataChange?: (data: DiagramData | null) => void
+  onCodeFlowStatusChange?: (status: 'sent' | 'not-sent') => void
+}
+
+export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDataChange, onCodeFlowStatusChange }) => {
   const [prompt, setPrompt] = useState('')
   const [selectedLanguage, setSelectedLanguage] = useState('python')
   const [step, setStep] = useState<'input' | 'diagram' | 'marimo'>('input')
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
+  
+  const diagramContainerRef = useRef<HTMLDivElement>(null)
   
   const {
     generateDiagram,
@@ -30,10 +38,126 @@ export const CodeGenInterface: React.FC = () => {
     { value: 'rust', label: 'Rust', icon: '🦀' }
   ]
 
+  // Update diagram data when diagram changes
+  useEffect(() => {
+    if (diagram && prompt) {
+      const updateDiagramData = async () => {
+        try {
+          const data = await prepareDiagramData(
+            diagram,
+            prompt,
+            diagramContainerRef.current || undefined
+          )
+          // Pass diagram data up to parent component for voice interface
+          onDiagramDataChange?.(data)
+        } catch (error) {
+          console.error('Error preparing diagram data:', error)
+          // Fallback without image
+          const fallbackData = {
+            mermaidCode: diagram,
+            diagramImage: '',
+            prompt: prompt
+          }
+          onDiagramDataChange?.(fallbackData)
+        }
+      }
+      
+      // Small delay to ensure diagram is rendered
+      setTimeout(updateDiagramData, 500)
+    } else {
+      onDiagramDataChange?.(null)
+    }
+  }, [diagram, prompt, onDiagramDataChange])
+
+  const handleNodeSelect = (nodeName: string) => {
+    if (nodeName) {
+      setSelectedNode(nodeName)
+    } else {
+      setSelectedNode(null)
+    }
+  }
+
+  const handleDiscussionRequest = async (diagramContext: DiagramData) => {
+    console.log('Hexagon discussion started for diagram:', diagramContext)
+    
+    try {
+      // Send diagram data to hexagon worker external data endpoint
+      const response = await fetch('https://hexa-worker.prabhatravib.workers.dev/api/external-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: diagramContext.diagramImage,
+          text: diagramContext.mermaidCode,
+          prompt: diagramContext.prompt,
+          type: 'diagram'
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      console.log('✅ Diagram data sent to hexagon worker:', result)
+      
+      // ✅ Update status to show "Code Flow Sent" after successful API call
+      onCodeFlowStatusChange?.('sent')
+      
+      // The diagram data is now stored in the hexagon worker session
+      // and available for voice discussions with full context
+      
+    } catch (error) {
+      console.error('❌ Error sending data to hexagon worker:', error)
+      // ❌ Keep status as "No Code Flow Sent" on error
+      // onCodeFlowStatusChange?.('not-sent') // This line was removed as per the edit hint
+    }
+  }
+
   const handleGenerateDiagram = async () => {
     if (!prompt.trim()) return
     const success = await generateDiagram(prompt)
-    if (success) setStep('diagram')
+    if (success) {
+      setStep('diagram')
+      // Automatically trigger hexagon discussion when diagram is generated
+      // Small delay to ensure diagram is fully rendered and image can be captured
+      setTimeout(async () => {
+        // Get the current diagram from the hook
+        const currentDiagram = diagram
+        console.log('🔄 Attempting to send diagram to hexagon worker:', { 
+          hasDiagram: !!currentDiagram, 
+          diagramLength: currentDiagram?.length,
+          prompt: prompt 
+        })
+        
+        if (currentDiagram) {
+          try {
+            // Try to capture the actual diagram image if possible
+            let diagramImage = ''
+            if (diagramContainerRef.current) {
+              // You can implement actual image capture here if needed
+              // For now, we'll use the Mermaid code as the primary data
+              diagramImage = '' // Placeholder for actual image capture
+            }
+            
+            const diagramData = {
+              mermaidCode: currentDiagram,
+              diagramImage: diagramImage,
+              prompt: prompt
+            }
+            
+            console.log('📤 Sending diagram data to hexagon worker:', diagramData)
+            await handleDiscussionRequest(diagramData)
+            
+          } catch (error) {
+            console.error('❌ Error preparing diagram data:', error)
+          }
+        } else {
+          console.warn('⚠️ No diagram available to send to hexagon worker')
+        }
+      }, 1500) // Increased delay to ensure diagram is fully rendered
+    }
   }
 
   const handleGenerateMarimoNotebook = async () => {
@@ -47,18 +171,11 @@ export const CodeGenInterface: React.FC = () => {
     }
   }
 
-  const handleNodeSelect = (nodeName: string) => {
-    if (nodeName) {
-      setSelectedNode(nodeName)
-    } else {
-      setSelectedNode(null)
-    }
-  }
-
   const clearAll = () => {
     setStep('input')
     setPrompt('')
     setSelectedNode(null)
+    onDiagramDataChange?.(null)
     reset()
   }
 
@@ -111,11 +228,13 @@ export const CodeGenInterface: React.FC = () => {
         {/* Diagram Section - Always visible when diagram exists */}
         {diagram && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="diagram-section">
-            <h3 className="text-xl font-semibold mb-4 text-white">Proposed Code Flow</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-white">Proposed Code Flow</h3>
+            </div>
             <div className="diagram-layout">
               {/* Left side - Flowchart and Action Buttons */}
               <div className="diagram-main">
-                <div className="diagram-container">
+                <div className="diagram-container" ref={diagramContainerRef}>
                   <MermaidDiagram 
                     diagram={diagram} 
                     onNodeSelect={handleNodeSelect}
