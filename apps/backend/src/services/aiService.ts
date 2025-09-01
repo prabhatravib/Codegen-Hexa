@@ -129,71 +129,14 @@ export async function generateMarimoNotebookWithAI(
   prompt: string, 
   diagram: string, 
   language: string, 
-  openaiApiKey: string
+  openaiApiKey: string,
+  flowGraph?: { nodes: any[], edges: any[] } | null
 ): Promise<string> {
   try {
-    const systemPrompt = promptManager.formatPrompt('marimo_generator', { language })
+    // Use the AI-powered generation service
+    const { generateMarimoNotebook } = await import('./marimoGenerationService')
     
-    // Create a more detailed user prompt that emphasizes implementation
-    const userPrompt = `Generate a Marimo notebook that implements the following requirement:
-
-USER REQUEST: ${prompt}
-
-FLOWCHART TO IMPLEMENT:
-${diagram}
-
-IMPORTANT: 
-- Each node in the flowchart represents a specific piece of functionality that must be implemented
-- Create actual working code for each step, not just descriptions
-- For the example "add 2 numbers": create input fields, validate inputs, perform addition, show result
-- The notebook should be fully functional and execute the logic shown in the flowchart
-
-Language: ${language}
-Generate the complete Marimo notebook now.`
-    
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'gpt-4.1',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.3,  // Lower temperature for more consistent output
-        max_tokens: 4000
-      })
-    })
-
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`)
-    }
-
-    const data = await response.json() as OpenAIResponse
-    const notebookContent = data.choices[0]?.message?.content || 'Failed to generate Marimo notebook'
-    
-    // Validate and clean the notebook content
-    let cleanedContent = notebookContent
-    
-    // Remove any markdown code block wrappers if present
-    cleanedContent = cleanedContent.replace(/^```python\n/, '').replace(/\n```$/, '')
-    
-    // Ensure proper Marimo structure
-    if (!cleanedContent.includes('# /// script')) {
-      cleanedContent = '# /// script\n' + cleanedContent
-    }
-    
-    if (!cleanedContent.includes('import marimo')) {
-      // Add marimo import after the script header
-      const lines = cleanedContent.split('\n')
-      lines.splice(1, 0, 'import marimo as mo', '', 'app = mo.App()', '')
-      cleanedContent = lines.join('\n')
-    }
-    
-    return cleanedContent
+    return await generateMarimoNotebook(prompt, diagram, language, flowGraph || null, openaiApiKey)
   } catch (error) {
     console.error('Error generating Marimo notebook with AI:', error)
     throw error

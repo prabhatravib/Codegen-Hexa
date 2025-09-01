@@ -50,7 +50,7 @@ marimoRouter.post('/create-viewer', async (c) => {
 marimoRouter.post('/generate', async (c) => {
   try {
     const body = await c.req.json()
-    const { diagram, language = 'python', prompt } = body
+    const { diagram, language = 'python', prompt, flowGraph } = body
     
     if (!diagram || !prompt) {
       return c.json({ 
@@ -68,8 +68,8 @@ marimoRouter.post('/generate', async (c) => {
       }, 500)
     }
 
-    // Generate Marimo notebook using AI
-    const marimoNotebook = await generateMarimoNotebookWithAI(prompt, diagram, language, openaiApiKey)
+    // Generate Marimo notebook using AI-powered generation
+    const marimoNotebook = await generateMarimoNotebookWithAI(prompt, diagram, language, openaiApiKey, flowGraph)
     
     // Generate a unique ID for this notebook
     const serverId = `marimo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`

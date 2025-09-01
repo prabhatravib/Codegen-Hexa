@@ -63,8 +63,7 @@ export const useCodeGen = () => {
       prompt 
     })
     
-    // Also log the full diagram to see its structure
-    console.log('Full diagram content:', diagram)
+
     
     setState(prev => ({ ...prev, isLoading: true, error: null }))
 
@@ -78,7 +77,7 @@ export const useCodeGen = () => {
         body: JSON.stringify({ 
           diagram, 
           language, 
-          prompt 
+          prompt
         })
       })
 
@@ -89,7 +88,7 @@ export const useCodeGen = () => {
       const data = await response.json()
       
       if (data.success && data.marimoNotebook) {
-        console.log('Generated Marimo notebook using AI backend')
+        console.log('Generated Marimo notebook using AI-powered generation')
         setState(prev => ({
           ...prev,
           marimoNotebook: data.marimoNotebook,
