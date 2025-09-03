@@ -20,6 +20,7 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
   
   const diagramContainerRef = useRef<HTMLDivElement>(null)
+  const lastSentDataRef = useRef<string | null>(null)
   
   const {
     generateDiagram,
@@ -78,56 +79,71 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
     }
   }
 
+  // Track pending requests to prevent concurrent calls
+  const pendingRequestRef = useRef<Promise<void> | null>(null)
+
   const handleDiscussionRequest = async (diagramContext: DiagramData) => {
     console.log('Hexagon discussion started for diagram:', diagramContext)
     
-    try {
-      // Get or generate session ID for synchronization
-      let sessionId = sessionManager.getSessionId()
-      if (!sessionId) {
-        sessionId = sessionManager.generateSessionId()
-        console.log('🆔 Generated new session ID:', sessionId)
-      } else {
-        console.log('🆔 Using existing session ID:', sessionId)
-      }
-
-      // Send diagram data to hexagon worker external data endpoint with session ID
-      const response = await fetch('https://hexa-worker.prabhatravib.workers.dev/api/external-data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          image: diagramContext.diagramImage,
-          text: diagramContext.mermaidCode,
-          prompt: diagramContext.prompt,
-          type: 'diagram',
-          sessionId: sessionId // 🔑 Add session ID for synchronization
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const result = await response.json()
-      console.log('✅ Diagram data sent to hexagon worker:', result)
-      
-      // ✅ Update status to show "Code Flow Sent" after successful API call
-      onCodeFlowStatusChange?.('sent')
-      
-      // The diagram data is now stored in the hexagon worker session
-      // and available for voice discussions with full context
-      
-    } catch (error) {
-      console.error('❌ Error sending data to hexagon worker:', error)
-      // ❌ Keep status as "No Code Flow Sent" on error
-      // onCodeFlowStatusChange?.('not-sent') // This line was removed as per the edit hint
+    // Check if there's already a pending request
+    if (pendingRequestRef.current) {
+      console.log('⏳ Waiting for previous request to complete')
+      await pendingRequestRef.current
     }
+    
+    // Create new request promise
+    pendingRequestRef.current = (async () => {
+      try {
+        // Send diagram data to hexagon worker external data endpoint
+        const response = await fetch('https://hexa-worker.prabhatravib.workers.dev/api/external-data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            mermaidCode: diagramContext.mermaidCode,
+            diagramImage: diagramContext.diagramImage,
+            prompt: diagramContext.prompt,
+            type: 'diagram'
+          })
+        })
+
+        if (!response.ok) {
+          // Handle 409 Conflict - investigate why hexagon worker is rejecting the data
+          if (response.status === 409) {
+            console.error('❌ 409 Conflict: Hexagon worker rejected the diagram data')
+            const errorText = await response.text()
+            console.error('Error details:', errorText)
+            throw new Error(`Hexagon worker rejected data: ${errorText}`)
+          }
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const result = await response.json()
+        console.log('✅ Diagram data sent to hexagon worker:', result)
+        
+        // ✅ Update status to show "Code Flow Sent" after successful API call
+        onCodeFlowStatusChange?.('sent')
+        
+      } catch (error) {
+        console.error('❌ Error sending data to hexagon worker:', error)
+      } finally {
+        // Clear the pending request
+        pendingRequestRef.current = null
+      }
+    })()
+    
+    // Wait for the request to complete
+    await pendingRequestRef.current
   }
 
   const handleGenerateDiagram = async () => {
     if (!prompt.trim()) return
+    
+    // Clear duplicate detection for new diagram generation
+    lastSentDataRef.current = null
+    console.log('🔄 Starting new diagram generation - cleared duplicate cache')
+    
     const success = await generateDiagram(prompt)
     if (success) {
       setStep('diagram')
@@ -167,7 +183,7 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
         } else {
           console.warn('⚠️ No diagram available to send to hexagon worker')
         }
-      }, 1500) // Increased delay to ensure diagram is fully rendered
+      }, 1000) // Small delay to ensure diagram is fully rendered
     }
   }
 
@@ -187,6 +203,9 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
     setPrompt('')
     setSelectedNode(null)
     onDiagramDataChange?.(null)
+    // Clear duplicate detection when starting over
+    lastSentDataRef.current = null
+    console.log('🔄 Cleared all data - reset duplicate cache')
     reset()
   }
 

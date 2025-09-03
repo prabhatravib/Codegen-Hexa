@@ -1,20 +1,16 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { sessionManager } from '../utils/sessionManager'
-
-interface DiagramData {
-  mermaidCode: string
-  diagramImage: string
-  prompt: string
-}
+import { DiagramData } from '../services/diagramCapture'
 
 interface HexaWorkerProps {
-  diagramData?: DiagramData | null
   codeFlowStatus: 'sent' | 'not-sent'
+  diagramData: DiagramData | null
 }
 
-export const HexaWorker: React.FC<HexaWorkerProps> = ({ diagramData, codeFlowStatus }) => {
+export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramData }) => {
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false) // Start with voice OFF
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   // Subscribe to session changes
   useEffect(() => {
@@ -31,6 +27,19 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ diagramData, codeFlowSta
 
     return unsubscribe
   }, [])
+
+  // Send diagram data to iframe when it changes
+  useEffect(() => {
+    if (diagramData && iframeRef.current && isVoiceEnabled) {
+      console.log('📤 Sending diagram data to HexaWorker iframe:', diagramData)
+      
+      // Send diagram data to the iframe via postMessage
+      iframeRef.current.contentWindow?.postMessage({
+        type: 'diagram_data',
+        data: diagramData
+      }, 'https://hexa-worker.prabhatravib.workers.dev')
+    }
+  }, [diagramData, isVoiceEnabled])
 
   const toggleVoice = () => {
     setIsVoiceEnabled(!isVoiceEnabled)
@@ -92,6 +101,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ diagramData, codeFlowSta
       {/* Hexa Worker iframe - Only render when voice is enabled */}
       {isVoiceEnabled ? (
         <iframe
+          ref={iframeRef}
           src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}` : ''}`}
           width="240"
           height="240"
@@ -105,14 +115,19 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ diagramData, codeFlowSta
           }}
           title="Hexa Voice Agent"
           allow="microphone"
-          // Pass diagram data to the iframe via URL parameters or postMessage
+          // Send diagram data to iframe when it loads
           onLoad={() => {
-            if (diagramData) {
-              console.log('Voice interface has access to diagram data:', diagramData)
-              // The iframe can now access the diagram data for discussions
-            }
+            console.log('🔄 Iframe loaded')
             if (sessionId) {
               console.log('🆔 Voice session started with session ID:', sessionId)
+            }
+            // Send diagram data immediately if available
+            if (diagramData) {
+              console.log('📤 Sending diagram data on iframe load:', diagramData)
+              iframeRef.current?.contentWindow?.postMessage({
+                type: 'diagram_data',
+                data: diagramData
+              }, 'https://hexa-worker.prabhatravib.workers.dev')
             }
           }}
         />

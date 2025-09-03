@@ -9,7 +9,7 @@ export interface DiagramData {
 }
 
 /**
- * Captures a Mermaid diagram as a base64 image
+ * Captures a Mermaid diagram as a base64 image using a CORS-safe approach
  * @param diagramContainer - The DOM element containing the rendered diagram
  * @returns Promise<string> - Base64 encoded image data
  */
@@ -21,6 +21,22 @@ export const captureDiagramAsImage = async (diagramContainer: HTMLElement): Prom
       throw new Error('No SVG element found in diagram container')
     }
 
+    // Clone the SVG to avoid modifying the original
+    const clonedSvg = svgElement.cloneNode(true) as SVGElement
+    
+    // Set CORS attributes to prevent tainted canvas
+    clonedSvg.setAttribute('crossorigin', 'anonymous')
+    
+    // Get SVG dimensions
+    const svgRect = svgElement.getBoundingClientRect()
+    const width = svgRect.width || 800
+    const height = svgRect.height || 600
+
+    // Set explicit dimensions on the cloned SVG
+    clonedSvg.setAttribute('width', width.toString())
+    clonedSvg.setAttribute('height', height.toString())
+    clonedSvg.setAttribute('viewBox', `0 0 ${width} ${height}`)
+
     // Create a canvas to render the SVG
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
@@ -28,35 +44,37 @@ export const captureDiagramAsImage = async (diagramContainer: HTMLElement): Prom
       throw new Error('Could not get canvas context')
     }
 
-    // Get SVG dimensions
-    const svgRect = svgElement.getBoundingClientRect()
-    const width = svgRect.width
-    const height = svgRect.height
-
     // Set canvas dimensions
     canvas.width = width
     canvas.height = height
 
-    // Create a blob from the SVG
-    const svgData = new XMLSerializer().serializeToString(svgElement)
+    // Create a blob from the SVG with proper CORS headers
+    const svgData = new XMLSerializer().serializeToString(clonedSvg)
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
     const url = URL.createObjectURL(svgBlob)
 
     // Create an image element to load the SVG
     const img = new Image()
+    img.crossOrigin = 'anonymous' // Set CORS attribute
     
     return new Promise((resolve, reject) => {
       img.onload = () => {
-        // Draw the image to canvas
-        ctx.drawImage(img, 0, 0, width, height)
-        
-        // Convert to base64
-        const base64Data = canvas.toDataURL('image/png')
-        
-        // Clean up
-        URL.revokeObjectURL(url)
-        
-        resolve(base64Data)
+        try {
+          // Draw the image to canvas
+          ctx.drawImage(img, 0, 0, width, height)
+          
+          // Convert to base64
+          const base64Data = canvas.toDataURL('image/png')
+          
+          // Clean up
+          URL.revokeObjectURL(url)
+          
+          resolve(base64Data)
+        } catch (canvasError) {
+          URL.revokeObjectURL(url)
+          const errorMessage = canvasError instanceof Error ? canvasError.message : 'Unknown canvas error'
+          reject(new Error(`Canvas rendering failed: ${errorMessage}`))
+        }
       }
       
       img.onerror = () => {
@@ -88,16 +106,30 @@ export const prepareDiagramData = async (
   
   if (diagramContainer) {
     try {
+      console.log('📸 Attempting to capture diagram image...')
       diagramImage = await captureDiagramAsImage(diagramContainer)
+      console.log('✅ Diagram image captured successfully')
     } catch (error) {
-      console.warn('Failed to capture diagram image:', error)
-      // Continue without image if capture fails
+      console.warn('⚠️ Failed to capture diagram image, continuing without image:', error)
+      // Continue without image if capture fails - the Mermaid code is the primary data
     }
+  } else {
+    console.log('📝 No diagram container provided, skipping image capture')
   }
 
-  return {
+  const diagramData = {
     mermaidCode,
     diagramImage,
     prompt
   }
+  
+  console.log('📊 Prepared diagram data:', {
+    hasMermaidCode: !!mermaidCode,
+    mermaidCodeLength: mermaidCode.length,
+    hasImage: !!diagramImage,
+    imageLength: diagramImage.length,
+    hasPrompt: !!prompt
+  })
+
+  return diagramData
 }
