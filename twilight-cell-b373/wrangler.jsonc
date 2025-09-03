@@ -4,63 +4,23 @@
   "compatibility_date": "2025-08-22",
   "observability": { "enabled": true },
   "durable_objects": {
-    "bindings": [{ "name": "MARIMO", "class_name": "MarimoContainer" }]
+    "bindings": [
+      { "name": "MARIMO_CONTAINER", "class_name": "MarimoContainerV2" }
+    ]
   },
-  "migrations": [
-    {
-      "tag": "v3",
-      "new_classes": [
-        "MarimoContainer"
-      ]
-    },
-    {
-      "tag": "v4",
-      "deleted_classes": [
-        "MarimoContainerV2"
-      ]
-    },
-    {
-      "tag": "v5",
-      "new_classes": [
-        "MarimoContainer"
-      ]
-    },
-    {
-      "tag": "v6",
-      "deleted_classes": [
-        "MarimoContainer"
-      ]
-    },
-    {
-      "tag": "v7",
-      "new_classes": [
-        "MarimoContainer"
-      ]
-    },
-    {
-      "tag": "v8",
-      "deleted_classes": [
-        "MarimoContainer"
-      ]
-    },
-    {
-      "tag": "v9",
-      "new_classes": [
-        "MarimoContainer"
-      ]
-    }
-  ],
   "containers": [
     {
-      "class_name": "MarimoContainer",
+      "class_name": "MarimoContainerV2",
       "image": "./Dockerfile",
-      "max_instances": 5,
-      "port": 8080,
-      "healthcheck": { "path": "/health" }
+      "instance_type": "basic",
+      "max_instances": 3
     }
+  ],
+  "migrations": [
+    { "tag": "v1-sqlite", "new_sqlite_classes": ["MarimoContainerV2"] }
   ],
   "vars": {
     "OPENAI_MODEL_MARIMO": "gpt-4.1",
-    "MARIMO_PORT": "8080"
+    "MARIMO_PORT": "2718"
   }
 }

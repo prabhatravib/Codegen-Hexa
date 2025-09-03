@@ -6,7 +6,6 @@ import { MermaidDiagram } from './MermaidDiagram'
 import { DeepDivePanel } from './DeepDivePanel'
 import { prepareDiagramData, DiagramData } from '../services/diagramCapture'
 import MarimoNotebook from './MarimoNotebook'
-import { sessionManager } from '../utils/sessionManager'
 
 interface CodeGenInterfaceProps {
   onDiagramDataChange?: (data: DiagramData | null) => void
@@ -69,7 +68,7 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
     } else {
       onDiagramDataChange?.(null)
     }
-  }, [diagram, prompt, onDiagramDataChange])
+  }, [diagram, prompt])
 
   const handleNodeSelect = (nodeName: string) => {
     if (nodeName) {

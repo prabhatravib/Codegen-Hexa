@@ -24,6 +24,8 @@ RUN chmod +x start.sh
 ENV MARIMO_SKIP_UPDATE_CHECK=1
 ENV MARIMO_LOG_LEVEL=INFO
 ENV PYTHONUNBUFFERED=1
+# Internal Marimo port (different from exposed port)
+ENV MARIMO_PORT=2718
 
 # Expose only port 8080 (FastAPI server)
 EXPOSE 8080
