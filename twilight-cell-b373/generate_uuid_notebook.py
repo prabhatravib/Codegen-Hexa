@@ -72,8 +72,8 @@ def __():
             dockerfile_content = f.read()
         
         # Replace the notebook path in the CMD line
-        old_cmd = 'CMD ["python", "-m", "marimo", "edit", "--host", "0.0.0.0", "--port", "8080", "--headless", "--no-token", "--skip-update-check", "/app/notebooks/a1b2c3d4_marimo_notebook.py"]'
-new_cmd = f'CMD ["python", "-m", "marimo", "edit", "--host", "0.0.0.0", "--port", "8080", "--headless", "--no-token", "--skip-update-check", "/app/notebooks/{notebook_name}"]'
+        old_cmd = 'CMD ["python", "-m", "marimo", "edit", "--host", "0.0.0.0", "--port", "2718", "--headless", "--no-token", "--skip-update-check", "/app/notebooks/a1b2c3d4_marimo_notebook.py"]'
+        new_cmd = f'CMD ["python", "-m", "marimo", "edit", "--host", "0.0.0.0", "--port", "2718", "--headless", "--no-token", "--skip-update-check", "/app/notebooks/{notebook_name}"]'
         
         dockerfile_content = dockerfile_content.replace(old_cmd, new_cmd)
         

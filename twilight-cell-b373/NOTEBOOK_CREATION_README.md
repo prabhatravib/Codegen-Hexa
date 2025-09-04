@@ -55,7 +55,7 @@ python test_notebook_creation.py
 
 # Build and test Docker container
 docker build -t marimo-test .
-docker run -p 8080:8080 marimo-test
+docker run -p 2718:2718 marimo-test
 ```
 
 ## ⚙️ Configuration Options
@@ -86,7 +86,7 @@ Modify the `starter_content` in `create_new_notebook()` to customize the initial
 
 ### Common Issues
 
-1. **Port Already in Use**: Ensure port 8080 is available
+1. **Port Already in Use**: Ensure port 2718 is available
 2. **Permission Errors**: Check Docker container permissions
 3. **Notebook Not Loading**: Verify the startup script is running correctly
 

@@ -8,10 +8,7 @@
   },
   "migrations": [
     {
-      "tag": "v10",
-      "deleted_classes": [
-        "MarimoContainerV2"
-      ],
+      "tag": "v3",
       "new_classes": [
         "MarimoContainer"
       ]
@@ -21,11 +18,7 @@
     {
       "class_name": "MarimoContainer",
       "image": "./Dockerfile",
-      "max_instances": 5
+      "max_instances": 10
     }
-  ],
-  "vars": {
-    "OPENAI_MODEL_MARIMO": "gpt-4.1",
-    "MARIMO_PORT": "8081"
-  }
+  ]
 }
