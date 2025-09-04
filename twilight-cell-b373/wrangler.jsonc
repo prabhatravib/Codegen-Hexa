@@ -4,23 +4,28 @@
   "compatibility_date": "2025-08-22",
   "observability": { "enabled": true },
   "durable_objects": {
-    "bindings": [
-      { "name": "MARIMO_CONTAINER", "class_name": "MarimoContainerV2" }
-    ]
+    "bindings": [{ "name": "MARIMO", "class_name": "MarimoContainer" }]
   },
-  "containers": [
+  "migrations": [
     {
-      "class_name": "MarimoContainerV2",
-      "image": "./Dockerfile",
-      "instance_type": "basic",
-      "max_instances": 3
+      "tag": "v10",
+      "deleted_classes": [
+        "MarimoContainerV2"
+      ],
+      "new_classes": [
+        "MarimoContainer"
+      ]
     }
   ],
-  "migrations": [
-    { "tag": "v1-sqlite", "new_sqlite_classes": ["MarimoContainerV2"] }
+  "containers": [
+    {
+      "class_name": "MarimoContainer",
+      "image": "./Dockerfile",
+      "max_instances": 5
+    }
   ],
   "vars": {
     "OPENAI_MODEL_MARIMO": "gpt-4.1",
-    "MARIMO_PORT": "2718"
+    "MARIMO_PORT": "8081"
   }
 }

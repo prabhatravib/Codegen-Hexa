@@ -1,48 +1,24 @@
-import { Container } from "@cloudflare/containers";
+import { Container, getContainer } from "@cloudflare/containers";
 
-export class MarimoContainerV2 extends Container {
+export class MarimoContainer extends Container {
   defaultPort = 8080;
-  requiredPorts = [8080, 2718]; // Require both ports to see actual errors
-  sleepAfter = "10m";
-
-  constructor(ctx: DurableObjectState, env: any) {
-    super(ctx, env);
-    this.ctx.blockConcurrencyWhile(async () => {
-      console.log("🚀 Starting container and waiting for ports...");
-      await this.startAndWaitForPorts(this.requiredPorts);
-      console.log("✅ Container started and all ports are ready");
-    });
-  }
-
-  async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url);
-    console.log(`🔍 Container fetch called: ${request.method} ${url.pathname}`);
-
-    // FastAPI API on 8080
-    if (url.pathname.startsWith("/api/")) {
-      console.log(`🌐 Routing to FastAPI on port 8080: ${url.pathname}`);
-      return this.containerFetch(request, 8080);
-    }
-
-    // Marimo UI on 2718 (proxy everything under /marimo/*)
-    if (url.pathname.startsWith("/marimo/")) {
-      console.log(`🌐 Routing to Marimo on port 2718: ${url.pathname}`);
-      return this.containerFetch(request, 2718);
-    }
-
-    // Default to API
-    console.log(`🌐 Default routing to FastAPI on port 8080: ${url.pathname}`);
-    return this.containerFetch(request, 8080);
-  }
+  sleepAfter = "2h";
 }
 
-
+function containerURL(req: Request, env: any): URL {
+  const u = new URL(req.url);
+  u.protocol = "http:";
+  u.hostname = "127.0.0.1";                // match the working /api/save path
+  u.port = String(Number(env.MARIMO_PORT ?? "8080"));
+  console.log(`🔧 containerURL: ${u.toString()}`);
+  return u;
+}
 
 // CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Upgrade, Connection, X-Requested-With',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Upgrade, Connection',
   'Access-Control-Max-Age': '86400',
 };
 
@@ -61,7 +37,11 @@ function createErrorResponse(error: string, status: number = 500): Response {
   return createJsonResponse({ ok: false, error }, status);
 }
 
-// Removed getStartedContainer - now using Durable Object directly
+async function getStartedContainer(env: any) {
+  const container = getContainer(env.MARIMO);
+  await container.start();
+  return container;
+}
 
 function addCorsHeaders(response: Response): Response {
   const newHeaders = new Headers(response.headers);
@@ -78,6 +58,7 @@ function addCorsHeaders(response: Response): Response {
 
 // Guard function to prevent proxying API endpoints
 function shouldProxy(url: URL): boolean {
+  if (url.pathname === '/api/generate-marimo') return false;
   if (url.pathname.startsWith('/api/')) return false;
   return true;
 }
@@ -97,7 +78,11 @@ export default {
     if (request.method === 'OPTIONS' && url.pathname.startsWith('/api/')) {
       return new Response(null, { 
         status: 204, 
-        headers: corsHeaders
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        }
       });
     }
     
@@ -160,25 +145,18 @@ export default {
           return createErrorResponse("invalid_marimo", 400);
         }
 
-        // Save to container via Durable Object
-        const durableObjectId = env.MARIMO_CONTAINER.idFromName("marimo-container");
-        const durableObject = env.MARIMO_CONTAINER.get(durableObjectId);
-        
-        // Create a proper Request object with absolute URL for the save endpoint
-        const saveUrl = new URL('/api/save', request.url);
-        const saveRequest = new Request(saveUrl.toString(), {
+        // Save to container with proper contract
+        const container = await getStartedContainer(env);
+        const saveUrl = containerURL(new Request('http://dummy/api/save'), env);
+        const saveResponse = await container.fetch(saveUrl.toString(), {
           method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            ...(env.MARIMO_TOKEN ? { "Authorization": `Bearer ${env.MARIMO_TOKEN}` } : {})
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
             id: filename.replace('.py', ''),
             filename: filename, 
             content 
           }),
         });
-        const saveResponse = await durableObject.fetch(saveRequest);
         
         if (!saveResponse.ok) {
           console.error('Container save error:', saveResponse.status, saveResponse.statusText);
@@ -208,11 +186,51 @@ export default {
       }
     }
     
+    // Legacy API endpoint for backward compatibility
+    if (url.pathname === '/api/save') {
+      try {
+        const body = await request.json() as { content: string; id: string };
+        const { content, id } = body;
+        
+        if (!content) {
+          return createErrorResponse('Content is required', 400);
+        }
+        
+        if (!content.includes('import marimo as mo') || !content.includes('app = mo.App()')) {
+          return createErrorResponse('Invalid Marimo notebook content', 400);
+        }
+        
+        const container = await getStartedContainer(env);
+        const filename = `notebook_${id || Date.now()}.py`;
+        
+        const saveResponse = await container.fetch('http://127.0.0.1:8080/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename, content })
+        });
+        
+        if (saveResponse.ok) {
+          const saveData = await saveResponse.json() as { appPath?: string };
+          return createJsonResponse({
+            success: true,
+            id: id,
+            filename: filename,
+            appPath: saveData.appPath || `/app/notebooks/${filename}`,
+            message: 'Notebook saved successfully'
+          });
+        } else {
+          throw new Error('Failed to save notebook to container');
+        }
+      } catch (error) {
+        console.error('Error saving notebook:', error);
+        return createErrorResponse('Failed to save notebook');
+      }
+    }
+    
     // Handle WebSocket upgrade requests
     if (request.headers.get('Upgrade') === 'websocket') {
       try {
-        const durableObjectId = env.MARIMO_CONTAINER.idFromName("marimo-container");
-        const container = env.MARIMO_CONTAINER.get(durableObjectId);
+        const container = await getStartedContainer(env);
         const response = await container.fetch(request);
         
         if (response.status === 101) {
@@ -238,11 +256,21 @@ export default {
     console.log(`🔄 Proxying to container: ${request.method} ${url.pathname}`);
     
     try {
-      const durableObjectId = env.MARIMO_CONTAINER.idFromName("marimo-container");
-      const container = env.MARIMO_CONTAINER.get(durableObjectId);
+      const container = await getStartedContainer(env);
       
-      console.log(`📡 Proxying request to container: ${request.method} ${url.pathname}`);
-      const response = await container.fetch(request);
+      // Use helper to build container URL with configurable port
+      const targetUrl = containerURL(request, env);
+      console.log(`🎯 Target URL: ${targetUrl.toString()}`);
+      
+      const proxyRequest = new Request(targetUrl.toString(), {
+        method: request.method,
+        headers: request.headers,
+        body: request.body
+      });
+      
+      const port = env.MARIMO_PORT ?? "8080";
+      console.log(`📡 Sending request to container on port ${port}...`);
+      const response = await container.fetch(proxyRequest);
       
       if (response.status === 101) {
         return response; // WebSocket upgrade
