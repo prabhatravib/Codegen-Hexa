@@ -78,7 +78,6 @@ function addCorsHeaders(response: Response): Response {
 
 // Guard function to prevent proxying API endpoints
 function shouldProxy(url: URL): boolean {
-  if (url.pathname === '/api/generate-marimo') return false;
   if (url.pathname.startsWith('/api/')) return false;
   return true;
 }
@@ -169,7 +168,10 @@ export default {
         const saveUrl = new URL('/api/save', request.url);
         const saveRequest = new Request(saveUrl.toString(), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            ...(env.MARIMO_TOKEN ? { "Authorization": `Bearer ${env.MARIMO_TOKEN}` } : {})
+          },
           body: JSON.stringify({ 
             id: filename.replace('.py', ''),
             filename: filename, 
@@ -203,50 +205,6 @@ export default {
       } catch (error) {
         console.error('AI generation error:', error);
         return createErrorResponse(error instanceof Error ? error.message : 'Unknown error');
-      }
-    }
-    
-    // Legacy API endpoint for backward compatibility
-    if (url.pathname === '/api/save') {
-      try {
-        const body = await request.json() as { content: string; id: string };
-        const { content, id } = body;
-        
-        if (!content) {
-          return createErrorResponse('Content is required', 400);
-        }
-        
-        if (!content.includes('import marimo as mo') || !content.includes('app = mo.App()')) {
-          return createErrorResponse('Invalid Marimo notebook content', 400);
-        }
-        
-        const durableObjectId = env.MARIMO_CONTAINER.idFromName("marimo-container");
-        const container = env.MARIMO_CONTAINER.get(durableObjectId);
-        const filename = `notebook_${id || Date.now()}.py`;
-        
-        // Create absolute URL for the save endpoint
-        const saveUrl = new URL('/api/save', request.url);
-        const saveResponse = await container.fetch(saveUrl.toString(), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filename, content })
-        });
-        
-        if (saveResponse.ok) {
-          const saveData = await saveResponse.json() as { appPath?: string };
-          return createJsonResponse({
-            success: true,
-            id: id,
-            filename: filename,
-            appPath: saveData.appPath || `/app/notebooks/${filename}`,
-            message: 'Notebook saved successfully'
-          });
-        } else {
-          throw new Error('Failed to save notebook to container');
-        }
-      } catch (error) {
-        console.error('Error saving notebook:', error);
-        return createErrorResponse('Failed to save notebook');
       }
     }
     
