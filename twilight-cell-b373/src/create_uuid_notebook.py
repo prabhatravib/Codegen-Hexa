@@ -60,8 +60,12 @@ def __():
     # Write the notebook
     notebook_path.write_text(content)
     
-    print(f"✅ Created notebook: {notebook_name}")
-    print(f"🌐 Access directly at: /{notebook_name}")
+    print(f"Created notebook: {notebook_name}", flush=True)
+    print(f"Notebook path: {notebook_path}", flush=True)
+    
+    # Ensure output is flushed
+    import sys
+    sys.stdout.flush()
     
     return notebook_name
 

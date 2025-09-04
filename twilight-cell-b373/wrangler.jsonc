@@ -6,14 +6,6 @@
   "durable_objects": {
     "bindings": [{ "name": "MARIMO", "class_name": "MarimoContainer" }]
   },
-  "migrations": [
-    {
-      "tag": "v3",
-      "new_classes": [
-        "MarimoContainer"
-      ]
-    }
-  ],
   "containers": [
     {
       "class_name": "MarimoContainer",
