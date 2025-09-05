@@ -35,14 +35,21 @@ marimoRouter.post('/generate', async (c) => {
     }
 
     // Generate Marimo notebook using AI-powered generation
+    console.log('Marimo: starting generation', {
+      diagram_len: typeof diagram === 'string' ? diagram.length : 0,
+      language,
+      has_flowGraph: !!flowGraph
+    })
     const marimoNotebook = await generateMarimoNotebookWithAI(prompt, diagram, language, openaiApiKey, flowGraph)
+    console.log('Marimo: generated notebook length', marimoNotebook?.length || 0)
     
     // Generate a unique ID for this notebook
     const serverId = `marimo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     console.log('Generating notebook with ID:', serverId)
     
     // Save to container and get interactive URL
-    const containerResponse = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/api/save', {
+    const containerUrl = 'https://twilight-cell-b373.prabhatravib.workers.dev/api/save'
+    const containerResponse = await fetch(containerUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -52,7 +59,20 @@ marimoRouter.post('/generate', async (c) => {
     })
     
     if (!containerResponse.ok) {
-      throw new Error('Failed to save notebook to container')
+      const errText = await containerResponse.text().catch(() => '')
+      console.error('Marimo container save failed', {
+        status: containerResponse.status,
+        statusText: containerResponse.statusText,
+        body: errText?.slice(0, 500)
+      })
+      return c.json({
+        success: false,
+        error: 'Failed to save notebook to container',
+        details: {
+          status: containerResponse.status,
+          statusText: containerResponse.statusText
+        }
+      }, 502)
     }
     
     const containerData = await containerResponse.json() as { success: boolean; id: string; url: string }

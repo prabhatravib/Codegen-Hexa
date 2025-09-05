@@ -64,6 +64,8 @@ Write-Host "  Building marimo container..." -ForegroundColor Cyan
 $marimoDir = Resolve-TargetPath "twilight-cell-b373"
 Push-Location $marimoDir
 try {
+    pnpm install
+    if ($LASTEXITCODE -ne 0) { throw "Marimo container pnpm install failed with exit code $LASTEXITCODE" }
     pnpm run build
     if ($LASTEXITCODE -ne 0) { throw "Marimo container build failed with exit code $LASTEXITCODE" }
 } finally {
@@ -73,12 +75,13 @@ try {
 # Step 3: Deploy all projects
 Write-Host "Deploying all projects..." -ForegroundColor Yellow
 
-# Deploy marimo container from root (uses root wrangler.jsonc)
+# Deploy marimo container from twilight-cell-b373 (uses its wrangler.jsonc)
 Write-Host "  Deploying marimo container..." -ForegroundColor Cyan
-Push-Location $Root
+Push-Location $marimoDir
 try {
-    if (-not (Test-Path 'wrangler.jsonc')) { throw "wrangler.jsonc missing in root" }
-    pnpm exec wrangler deploy
+    if (-not (Test-Path 'wrangler.jsonc')) { throw "wrangler.jsonc missing in twilight-cell-b373" }
+    # Use the package script so we leverage local wrangler config
+    pnpm run deploy
     if ($LASTEXITCODE -ne 0) { throw "Marimo container deployment failed with exit code $LASTEXITCODE" }
 } finally {
     Pop-Location

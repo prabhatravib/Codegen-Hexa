@@ -63,7 +63,8 @@ export default {
           return new Response(JSON.stringify({
             success: true,
             id: id,
-            url: `https://twilight-cell-b373.prabhatravib.workers.dev/notebooks/${id}`
+            // Expose the base URL of the container; the container serves the active notebook at '/'
+            url: `https://twilight-cell-b373.prabhatravib.workers.dev/`
           }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
@@ -129,4 +130,3 @@ export default {
     }
   },
 };
-
