@@ -15,18 +15,26 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
   const iframeRef = useRef<HTMLIFrameElement>(null)
   
   useEffect(() => {
-    // The marimoNotebook should already be a URL from the Worker's /api/generate-marimo endpoint
+    // The marimoNotebook is now the actual notebook content from the backend API
     const createAndServeNotebook = async () => {
       try {
         setStatus('loading')
         setError(null)
         
-        if (marimoNotebook && marimoNotebook.startsWith('http')) {
-          // It's already a URL, use it directly
-          setMarimoUrl(marimoNotebook)
-          setStatus('ready')
+        if (marimoNotebook) {
+          if (marimoNotebook.startsWith('http')) {
+            // It's a URL, use it directly
+            setMarimoUrl(marimoNotebook)
+            setStatus('ready')
+          } else {
+            // It's notebook content, create a data URL for display
+            const notebookBlob = new Blob([marimoNotebook], { type: 'text/plain' })
+            const notebookUrl = URL.createObjectURL(notebookBlob)
+            setMarimoUrl(notebookUrl)
+            setStatus('ready')
+          }
         } else {
-          throw new Error('Invalid notebook URL received from server')
+          throw new Error('No notebook content received from server')
         }
       } catch (error) {
         console.error('Error creating notebook:', error)
@@ -64,13 +72,21 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
     setIsLoading(true)
     setMarimoUrl(null)
     
-    // Retry - just check if the URL is valid
+    // Retry - check if we have notebook content
     setTimeout(() => {
-      if (marimoNotebook && marimoNotebook.startsWith('http')) {
-        setMarimoUrl(marimoNotebook)
-        setStatus('ready')
+      if (marimoNotebook) {
+        if (marimoNotebook.startsWith('http')) {
+          setMarimoUrl(marimoNotebook)
+          setStatus('ready')
+        } else {
+          // It's notebook content, create a data URL for display
+          const notebookBlob = new Blob([marimoNotebook], { type: 'text/plain' })
+          const notebookUrl = URL.createObjectURL(notebookBlob)
+          setMarimoUrl(notebookUrl)
+          setStatus('ready')
+        }
       } else {
-        setError('Invalid notebook URL received from server')
+        setError('No notebook content received from server')
         setStatus('error')
       }
       setIsLoading(false)

@@ -72,17 +72,17 @@ export const useCodeGen = () => {
       
       console.log('Parsed flow graph:', flow)
 
-      // Call the new AI-powered Marimo generation endpoint
-      const response = await fetch('https://twilight-cell-b373.prabhatravib.workers.dev/api/generate-marimo', {
+      // Call the backend API for Marimo generation
+      const response = await fetch('https://codegen-hexa-backend.prabhatravib.workers.dev/api/marimo/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          title: prompt,
+          prompt,
           language, 
-          mermaid: diagram,
-          flow
+          diagram,
+          flowGraph: flow
         })
       })
 
@@ -92,11 +92,11 @@ export const useCodeGen = () => {
 
       const data = await response.json()
       
-      if (data.ok && data.url) {
+      if (data.success && data.marimoNotebook) {
         console.log('Generated Marimo notebook using AI-powered generation')
         setState(prev => ({
           ...prev,
-          marimoNotebook: data.url, // This is now the URL to the generated notebook
+          marimoNotebook: data.marimoNotebook, // This is the generated notebook content
           isLoading: false,
           error: null
         }))

@@ -13,7 +13,9 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy app files
-COPY . /app
+COPY src/ /app/src/
+COPY *.py /app/
+COPY start.sh /app/
 
 # Create notebooks directory
 RUN mkdir -p /app/notebooks
@@ -25,8 +27,7 @@ ENV MARIMO_LOG_LEVEL=INFO
 # Expose port
 EXPOSE 2718
 
-# Copy and make executable the start script
-COPY start.sh /app/start.sh
+# Make executable the start script
 RUN chmod +x /app/start.sh
 
 # Use the start script

@@ -16,6 +16,19 @@ export class MarimoContainerV2 extends Container {
 
 export default {
   async fetch(request: Request, env: any) {
+    // Handle CORS preflight requests
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+          'Access-Control-Max-Age': '86400',
+        },
+      });
+    }
+
     // Get the container instance
     const container = getContainer(env.MARIMO);
     
@@ -26,7 +39,21 @@ export default {
     
     // Forward ALL requests to the Marimo container
     // This ensures the notebook interface is properly served
-    return container.fetch(request);
+    const response = await container.fetch(request);
+    
+    // Add CORS headers to the response
+    const corsResponse = new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: {
+        ...Object.fromEntries(response.headers.entries()),
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      },
+    });
+    
+    return corsResponse;
   },
 };
 
