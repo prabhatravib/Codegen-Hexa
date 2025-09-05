@@ -46,12 +46,7 @@ app.get('/', (c) => {
       '/api/generate-diagram',
       '/api/deepdive-node',
       '/api/generate-code',
-      '/api/marimo/generate',
-      '/api/marimo/create-viewer',
-      '/api/marimo/save-to-container',
-      '/api/marimo/notebook/:serverId',
-      '/api/marimo/viewer/:serverId',
-      '/api/marimo/cleanup'
+      '/api/marimo/generate'
     ]
   })
 })

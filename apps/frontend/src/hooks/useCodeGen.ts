@@ -72,7 +72,7 @@ export const useCodeGen = () => {
       
       console.log('Parsed flow graph:', flow)
 
-      // Call the backend API for Marimo generation
+      // Single step: Generate Marimo notebook and save to container
       const response = await fetch('https://codegen-hexa-backend.prabhatravib.workers.dev/api/marimo/generate', {
         method: 'POST',
         headers: {
@@ -92,11 +92,11 @@ export const useCodeGen = () => {
 
       const data = await response.json()
       
-      if (data.success && data.marimoNotebook) {
-        console.log('Generated Marimo notebook using AI-powered generation')
+      if (data.success && data.marimoUrl) {
+        console.log('Marimo notebook generated and saved to container, URL:', data.marimoUrl)
         setState(prev => ({
           ...prev,
-          marimoNotebook: data.marimoNotebook, // This is the generated notebook content
+          marimoNotebook: data.marimoUrl, // This is the interactive URL
           isLoading: false,
           error: null
         }))

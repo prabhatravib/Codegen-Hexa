@@ -15,29 +15,27 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
   const iframeRef = useRef<HTMLIFrameElement>(null)
   
   useEffect(() => {
-    // The marimoNotebook is now the actual notebook content from the backend API
-    const createAndServeNotebook = async () => {
+    // The marimoNotebook is now a URL to the interactive Marimo container
+    const setupNotebook = async () => {
       try {
         setStatus('loading')
         setError(null)
         
         if (marimoNotebook) {
           if (marimoNotebook.startsWith('http')) {
-            // It's a URL, use it directly
+            // It's a URL to the Marimo container, use it directly
+            console.log('Setting up Marimo notebook with URL:', marimoNotebook)
             setMarimoUrl(marimoNotebook)
             setStatus('ready')
           } else {
-            // It's notebook content, create a data URL for display
-            const notebookBlob = new Blob([marimoNotebook], { type: 'text/plain' })
-            const notebookUrl = URL.createObjectURL(notebookBlob)
-            setMarimoUrl(notebookUrl)
-            setStatus('ready')
+            // Fallback: if it's still raw content, show error
+            throw new Error('Received raw notebook content instead of interactive URL. Please try again.')
           }
         } else {
-          throw new Error('No notebook content received from server')
+          throw new Error('No notebook URL received from server')
         }
       } catch (error) {
-        console.error('Error creating notebook:', error)
+        console.error('Error setting up notebook:', error)
         setError(error instanceof Error ? error.message : 'Unknown error occurred')
         setStatus('error')
       } finally {
@@ -45,19 +43,30 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
       }
     }
     
-    createAndServeNotebook()
+    setupNotebook()
   }, [marimoNotebook])
 
-  const handleDownload = () => {
-    const blob = new Blob([marimoNotebook], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'marimo_notebook.py'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+  const handleDownload = async () => {
+    try {
+      // Since marimoNotebook is now a URL, we need to fetch the content
+      if (marimoNotebook && marimoNotebook.startsWith('http')) {
+        const response = await fetch(marimoNotebook)
+        const content = await response.text()
+        const blob = new Blob([content], { type: 'text/plain' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'marimo_notebook.py'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      } else {
+        console.error('Cannot download: marimoNotebook is not a valid URL')
+      }
+    } catch (error) {
+      console.error('Error downloading notebook:', error)
+    }
   }
 
   const handleOpenInNewTab = () => {
@@ -72,21 +81,13 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
     setIsLoading(true)
     setMarimoUrl(null)
     
-    // Retry - check if we have notebook content
+    // Retry - check if we have notebook URL
     setTimeout(() => {
-      if (marimoNotebook) {
-        if (marimoNotebook.startsWith('http')) {
-          setMarimoUrl(marimoNotebook)
-          setStatus('ready')
-        } else {
-          // It's notebook content, create a data URL for display
-          const notebookBlob = new Blob([marimoNotebook], { type: 'text/plain' })
-          const notebookUrl = URL.createObjectURL(notebookBlob)
-          setMarimoUrl(notebookUrl)
-          setStatus('ready')
-        }
+      if (marimoNotebook && marimoNotebook.startsWith('http')) {
+        setMarimoUrl(marimoNotebook)
+        setStatus('ready')
       } else {
-        setError('No notebook content received from server')
+        setError('No valid notebook URL received from server')
         setStatus('error')
       }
       setIsLoading(false)
