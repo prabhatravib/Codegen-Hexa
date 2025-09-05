@@ -1,4 +1,5 @@
 import { Container, getContainer } from "@cloudflare/containers";
+export { NotebookStore } from './notebook_store'
 
 export class MarimoContainer extends Container {
   // Worker will wait until this port is listening
@@ -93,6 +94,19 @@ export default {
             });
           }
 
+          // Persist content by id in a Durable Object so any region can start correctly
+          try {
+            const storeId = env.NOTEBOOK_STORE.idFromName(id)
+            const stub = env.NOTEBOOK_STORE.get(storeId)
+            await stub.fetch(new URL('/state', request.url), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id, content })
+            })
+          } catch (e) {
+            console.error('Failed to persist notebook content', e)
+          }
+
           // Get the container instance
           const container = getContainer(env.MARIMO);
           
@@ -108,8 +122,8 @@ export default {
           return new Response(JSON.stringify({
             success: true,
             id: id,
-            // Expose the base URL of the container; the container serves the active notebook at '/'
-            url: `https://twilight-cell-b373.prabhatravib.workers.dev/`
+            // Return URL with id so any region can restore content if needed
+            url: `https://twilight-cell-b373.prabhatravib.workers.dev/?id=${encodeURIComponent(id)}`
           }), {
             status: 200,
             headers: {
@@ -135,14 +149,32 @@ export default {
       }
     }
 
-    // Get the container instance
+    // Get the container instance.
     const container = getContainer(env.MARIMO);
-    
-    // Ensure container is started
-    console.log("Starting Marimo container...");
-    await container.start();
-    console.log("Container started successfully");
-    
+
+    // If an id is supplied, ensure the container is started with the saved content in this region
+    const idParam = url.searchParams.get('id')
+    if (idParam) {
+      try {
+        const storeId = env.NOTEBOOK_STORE.idFromName(idParam)
+        const stub = env.NOTEBOOK_STORE.get(storeId)
+        const res = await stub.fetch(new URL('/state', request.url))
+        if (res.ok) {
+          const data = await res.json() as { content?: string }
+          const content = data?.content
+          if (typeof content === 'string' && content.length > 0) {
+            try {
+              await container.start({ envVars: { NOTEBOOK_CONTENT: content } })
+            } catch (e) {
+              // Ignore start errors if already running
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to restore notebook content for id', idParam, e)
+      }
+    }
+
     try {
       // Forward ALL requests to the Marimo container
       // Important: Preserve WebSocket/SSE upgrades by returning the original response
@@ -172,12 +204,14 @@ export default {
       console.error('Error forwarding request to container:', error);
       
       // Return a proper error response with CORS headers
-      return new Response(JSON.stringify({ 
-        error: 'Failed to process request', 
-        message: error instanceof Error ? error.message : 'Unknown error' 
-      }), {
-        status: 500,
-        statusText: 'Internal Server Error',
+      const body = {
+        error: 'Container not ready',
+        hint: 'Use /api/save first to start the container with your notebook content.',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      }
+      return new Response(JSON.stringify(body), {
+        status: 503,
+        statusText: 'Service Unavailable',
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
