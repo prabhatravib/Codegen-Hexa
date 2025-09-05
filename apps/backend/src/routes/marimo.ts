@@ -7,6 +7,8 @@ interface Env {
   PYTHON_API_URL?: string
   OPENAI_API_KEY?: string
   OPENAI_REALTIME_MODEL?: string
+  MARIMO_CONTAINER_URL?: string
+  MARIMO_SERVICE?: Fetcher
 }
 
 const marimoRouter = new Hono<{ Bindings: Env }>()
@@ -47,35 +49,76 @@ marimoRouter.post('/generate', async (c) => {
     const serverId = `marimo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     console.log('Generating notebook with ID:', serverId)
     
-    // Save to container and get interactive URL
-    const containerUrl = 'https://twilight-cell-b373.prabhatravib.workers.dev/api/save'
-    const containerResponse = await fetch(containerUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        content: marimoNotebook,
-        id: serverId
-      })
-    })
-    
-    if (!containerResponse.ok) {
-      const errText = await containerResponse.text().catch(() => '')
-      console.error('Marimo container save failed', {
-        status: containerResponse.status,
-        statusText: containerResponse.statusText,
-        body: errText?.slice(0, 500)
-      })
-      return c.json({
-        success: false,
-        error: 'Failed to save notebook to container',
-        details: {
-          status: containerResponse.status,
-          statusText: containerResponse.statusText
+    // Save to container and get interactive URL (prefer service binding, fallback to HTTP)
+    let containerData: { success: boolean; id: string; url: string } | null = null
+    let attempts: Array<{ via: string; status?: number; statusText?: string; body?: string; url?: string }> = []
+
+    const bodyJson = JSON.stringify({ content: marimoNotebook, id: serverId })
+
+    // 1) Try service binding if available
+    if (c.env.MARIMO_SERVICE && 'fetch' in c.env.MARIMO_SERVICE) {
+      try {
+        const svcUrl = 'https://service/api/save'
+        const resp = await (c.env.MARIMO_SERVICE as Fetcher).fetch(svcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: bodyJson
+        })
+        if (resp.ok) {
+          containerData = await resp.json() as any
+          console.log('Saved notebook via service binding', { id: serverId })
+        } else {
+          const errText = await resp.text().catch(() => '')
+          attempts.push({ via: 'service', status: resp.status, statusText: resp.statusText, body: errText?.slice(0, 500) })
+          console.error('Marimo save via service failed', attempts[attempts.length - 1])
         }
-      }, 502)
+      } catch (e) {
+        attempts.push({ via: 'service', body: e instanceof Error ? e.message : String(e) })
+        console.error('Marimo save via service error', attempts[attempts.length - 1])
+      }
     }
-    
-    const containerData = await containerResponse.json() as { success: boolean; id: string; url: string }
+
+    // 2) If service binding didn’t work, try HTTP endpoints
+    if (!containerData) {
+      const primaryBase = c.env.MARIMO_CONTAINER_URL || 'https://twilight-cell-b373.prabhatravib.workers.dev'
+      const fallbacks = ['https://codegen-hexa.prabhatravib.workers.dev']
+      const endpoints = [primaryBase, ...fallbacks]
+
+      // Try a quick health check before save
+      for (const base of endpoints) {
+        const health = base.replace(/\/$/, '') + '/api/health'
+        try {
+          const h = await fetch(health, { method: 'GET' })
+          const ok = h.ok
+          const text = await h.text().catch(() => '')
+          console.log('Health check', { base, ok })
+          attempts.push({ via: 'http-health', url: health, status: h.status, statusText: h.statusText, body: text?.slice(0, 200) })
+        } catch (e) {
+          attempts.push({ via: 'http-health', url: health, body: e instanceof Error ? e.message : String(e) })
+        }
+      }
+
+      for (const base of endpoints) {
+        const url = base.replace(/\/$/, '') + '/api/save'
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: bodyJson
+        })
+        if (resp.ok) {
+          containerData = await resp.json() as any
+          console.log('Saved notebook to container', { target: base, id: serverId })
+          break
+        }
+        const errText = await resp.text().catch(() => '')
+        attempts.push({ via: 'http', url, status: resp.status, statusText: resp.statusText, body: errText?.slice(0, 500) })
+        console.error('Marimo container save failed', attempts[attempts.length - 1])
+      }
+    }
+
+    if (!containerData) {
+      return c.json({ success: false, error: 'Failed to save notebook to container', attempts }, 502)
+    }
     
     return c.json({
       success: true,

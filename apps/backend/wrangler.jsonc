@@ -10,5 +10,10 @@
   "dev": {
     "port": 8787
   },
-
+  "services": [
+    { "binding": "MARIMO_SERVICE", "service": "twilight-cell-b373" }
+  ],
+  "vars": {
+    "MARIMO_CONTAINER_URL": "https://twilight-cell-b373.prabhatravib.workers.dev"
+  }
 }
