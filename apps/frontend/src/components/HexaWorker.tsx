@@ -52,7 +52,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
   }
 
   return (
-    <div className="fixed top-4 right-4 z-50 hexa-worker-container" style={{ position: 'fixed', top: '16px', right: '16px', zIndex: 50 }}>
+    <div className="fixed top-4 left-4 z-50 hexa-worker-container" style={{ position: 'fixed', top: '16px', left: '16px', zIndex: 50 }}>
       {/* Voice Toggle Switch */}
       <div className="flex items-center space-x-3 mb-3">
         <div className="flex items-center">
@@ -103,15 +103,15 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
         <iframe
           ref={iframeRef}
           src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}` : ''}`}
-          width="240"
-          height="240"
+          width="340"
+          height="340"
           style={{
             border: 'none',
-            borderRadius: '50%',
             backgroundColor: 'transparent',
             transition: 'opacity 0.3s ease',
             transform: 'scale(1)',
-            transformOrigin: 'center'
+            transformOrigin: 'center',
+            clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
           }}
           title="Hexa Voice Agent"
           allow="microphone"
@@ -135,16 +135,16 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
         /* Disabled state - show placeholder with same dimensions */
         <div
           style={{
-            width: '240px',
-            height: '240px',
+            width: '340px',
+            height: '340px',
             border: 'none',
-            borderRadius: '50%',
             backgroundColor: 'rgba(0, 0, 0, 0.3)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             opacity: 0.5,
-            transition: 'opacity 0.3s ease'
+            transition: 'opacity 0.3s ease',
+            clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
           }}
         >
           <div className="text-white text-sm font-medium">Voice Disabled</div>

@@ -119,10 +119,28 @@ marimoRouter.post('/generate', async (c) => {
     if (!containerData) {
       return c.json({ success: false, error: 'Failed to save notebook to container', attempts }, 502)
     }
+    // Ensure absolute URL for the frontend
+    let marimoUrlAbs = containerData.url
+    if (marimoUrlAbs && !/^https?:\/\//i.test(marimoUrlAbs)) {
+      const base = c.env.MARIMO_CONTAINER_URL || 'https://twilight-cell-b373.prabhatravib.workers.dev'
+      marimoUrlAbs = new URL(marimoUrlAbs, base).toString()
+    }
     
+    // Readiness poll: wait briefly for the editor to respond 200
+    try {
+      const maxTries = 8;
+      for (let i = 0; i < maxTries; i++) {
+        const r = await fetch(marimoUrlAbs, { method: 'GET' });
+        if (r.ok) break;
+        await new Promise((res) => setTimeout(res, 1000));
+      }
+    } catch (e) {
+      // Non-fatal, DO will also ensure readiness before proxying
+    }
+
     return c.json({
       success: true,
-      marimoUrl: containerData.url,
+      marimoUrl: marimoUrlAbs,
       notebookId: containerData.id,
       diagram: diagram,
       language: language,

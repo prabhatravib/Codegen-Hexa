@@ -1,5 +1,5 @@
 #!/bin/sh
-set -eu
+set -euo pipefail
 
 echo "[start] Marimo container starting..."
 
@@ -21,16 +21,14 @@ if [ -n "${NOTEBOOK_CONTENT:-}" ]; then
 else
   echo "[start] No NOTEBOOK_CONTENT provided; writing default notebook"
   cat > "$NOTEBOOK_PATH" << 'EOF'
-# /// script
 import marimo as mo
 
 app = mo.App()
 
 @app.cell
 def __():
-    """Welcome to Marimo!"""
     mo.md("""
-    # Welcome to Marimo
+    # Marimo is starting
     This is a basic Marimo notebook. New content will be loaded here when you generate a notebook.
     """)
     return None
@@ -44,7 +42,6 @@ def __():
 def __():
     mo.md(f"**Message:** {message}")
     return None
-# ///
 EOF
 fi
 
@@ -54,15 +51,43 @@ echo "[start] Notebook at: $NOTEBOOK_PATH"
 PORT_TO_USE="${PORT:-2718}"
 echo "[start] Using port: $PORT_TO_USE"
 
-# Try to start Marimo with a compatible command
-echo "[start] Attempting: python -m marimo edit --host 0.0.0.0 --port $PORT_TO_USE $NOTEBOOK_PATH"
-python -m marimo edit --host 0.0.0.0 --port "$PORT_TO_USE" "$NOTEBOOK_PATH"
-status=$?
-if [ $status -ne 0 ]; then
-  echo "[start] 'marimo edit' exited with $status; falling back to 'marimo run'"
-  echo "[start] Attempting: python -m marimo run --host 0.0.0.0 --port $PORT_TO_USE $NOTEBOOK_PATH"
-  exec python -m marimo run --host 0.0.0.0 --port "$PORT_TO_USE" "$NOTEBOOK_PATH"
+# Log Python and Marimo versions for diagnostics
+python -V || true
+python - <<'PY'
+try:
+    import marimo
+    print("[start] marimo version:", marimo.__version__)
+except Exception as e:
+    print("[start] marimo import failed:", e)
+PY
+
+# Validate notebook syntax; if invalid, write a safe fallback
+if ! python - <<PY
+import py_compile, sys
+try:
+    py_compile.compile("$NOTEBOOK_PATH", doraise=True)
+    print("[start] Notebook syntax OK")
+except Exception as e:
+    print("[start] Notebook syntax error:", e)
+    sys.exit(42)
+PY
+then
+  echo "[start] Overwriting with safe fallback notebook due to syntax error"
+  cat > "$NOTEBOOK_PATH" << 'EOF'
+import marimo as mo
+
+app = mo.App()
+
+@app.cell
+def __():
+    mo.md("""
+    # Notebook Error
+    The generated content had a syntax error. This is a safe fallback.
+    """)
+    return None
+EOF
 fi
 
-# If edit started successfully and later exits, just exit with its status
-exit $status
+# Start Marimo editor with file first (CLI expects path as positional)
+echo "[start] Exec: python -m marimo edit $NOTEBOOK_PATH --host 0.0.0.0 --port $PORT_TO_USE --headless --no-token --skip-update-check"
+exec python -m marimo edit "$NOTEBOOK_PATH" --host 0.0.0.0 --port "$PORT_TO_USE" --headless --no-token --skip-update-check

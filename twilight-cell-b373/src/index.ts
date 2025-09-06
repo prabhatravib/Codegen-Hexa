@@ -1,40 +1,98 @@
 import { Container } from "@cloudflare/containers";
+import type { DurableObject } from "cloudflare:workers";
+export { NotebookStore } from './notebook_store';
 
 export class MarimoContainerV2 extends Container {
-  defaultPort = 8080;
-  requiredPorts = [8080, 2718]; // Require both ports to see actual errors
+  // Marimo listens on 2718
+  defaultPort = 2718;
+  requiredPorts = [2718];
   sleepAfter = "10m";
 
-  constructor(ctx: DurableObjectState, env: any) {
+  constructor(ctx: DurableObject["ctx"], env: any) {
     super(ctx, env);
-    this.ctx.blockConcurrencyWhile(async () => {
-      console.log("🚀 Starting container and waiting for ports...");
-      await this.startAndWaitForPorts(this.requiredPorts);
-      console.log("✅ Container started and all ports are ready");
-    });
   }
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     console.log(`🔍 Container fetch called: ${request.method} ${url.pathname}`);
 
-    // FastAPI API on 8080
-    if (url.pathname.startsWith("/api/")) {
-      console.log(`🌐 Routing to FastAPI on port 8080: ${url.pathname}`);
-      return this.containerFetch(request, 8080);
+    // Handle minimal API inside the DO
+    if (url.pathname === "/api/health" && request.method === "GET") {
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (url.pathname === "/api/save" && request.method === "POST") {
+      try {
+        const body = await request.json() as { id?: string; filename?: string; content?: string };
+        const id = body.id || crypto.randomUUID();
+        const filename = body.filename || `${id}.py`;
+        const content = body.content ?? "";
+
+        if (!content || content.length === 0) {
+          return new Response(JSON.stringify({ ok: false, error: "missing_content" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        // Restart container with the notebook content to ensure updates take effect
+        try {
+          await this.stop();
+        } catch (_) {
+          // ignore stop errors (container may not be running)
+        }
+        await this.start({ envVars: { NOTEBOOK_CONTENT: content } });
+        await this.startAndWaitForPorts(2718);
+
+        // Return the Worker root; it reliably serves the Marimo UI
+        const urlPath = "/";
+        return new Response(JSON.stringify({ ok: true, url: urlPath, id, filename }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e instanceof Error ? e.message : String(e) }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Marimo UI on 2718 (proxy everything under /marimo/*)
     if (url.pathname.startsWith("/marimo/")) {
-      console.log(`🌐 Routing to Marimo on port 2718: ${url.pathname}`);
-      return this.containerFetch(request, 2718);
+      // Rewrite /marimo/* -> /* for the container, since Marimo serves /edit/* at root
+      const internalPath = url.pathname.replace(/^\/marimo/, "");
+      const target = new URL(`http://localhost:2718${internalPath}${url.search}`);
+      const req = new Request(target.toString(), request);
+      console.log(`🌐 Routing to Marimo (rewritten): ${internalPath || "/"}`);
+      try {
+        await this.startAndWaitForPorts(2718);
+        return await this.containerFetch(req, 2718);
+      } catch (e) {
+        console.warn('Proxy to Marimo failed, retrying after ensuring readiness...', e);
+        await this.startAndWaitForPorts(2718);
+        return this.containerFetch(req, 2718);
+      }
     }
 
-    // Default to API
-    console.log(`🌐 Default routing to FastAPI on port 8080: ${url.pathname}`);
-    return this.containerFetch(request, 8080);
+    // Default: route to Marimo editor port 2718
+    console.log(`🌐 Default routing to Marimo on port 2718: ${url.pathname}`);
+    try {
+      await this.startAndWaitForPorts(2718);
+      return await this.containerFetch(request, 2718);
+    } catch (e) {
+      console.warn('Default route proxy failed, retrying after ensuring readiness...', e);
+      await this.startAndWaitForPorts(2718);
+      return this.containerFetch(request, 2718);
+    }
   }
 }
+
+// Export class name expected by wrangler bindings
+export class MarimoContainer extends MarimoContainerV2 {}
 
 
 
@@ -78,7 +136,8 @@ function addCorsHeaders(response: Response): Response {
 
 // Guard function to prevent proxying API endpoints
 function shouldProxy(url: URL): boolean {
-  if (url.pathname.startsWith('/api/')) return false;
+  // Only block Worker-handled endpoints; proxy everything else to the container
+  if (url.pathname === '/api/generate-marimo') return false;
   return true;
 }
 
@@ -90,7 +149,7 @@ export default {
     
     // Debug route to check container port configuration
     if (url.pathname === '/container/port') {
-      return new Response(String(env.MARIMO_PORT ?? "8080"), { headers: { "content-type": "text/plain" } });
+      return new Response(String(env.MARIMO_PORT ?? "2718"), { headers: { "content-type": "text/plain" } });
     }
     
     // Handle CORS preflight for API endpoints
@@ -161,8 +220,8 @@ export default {
         }
 
         // Save to container via Durable Object
-        const durableObjectId = env.MARIMO_CONTAINER.idFromName("marimo-container");
-        const durableObject = env.MARIMO_CONTAINER.get(durableObjectId);
+        const durableObjectId = env.MARIMO.idFromName("marimo-container");
+        const durableObject = env.MARIMO.get(durableObjectId);
         
         // Create a proper Request object with absolute URL for the save endpoint
         const saveUrl = new URL('/api/save', request.url);
@@ -211,8 +270,8 @@ export default {
     // Handle WebSocket upgrade requests
     if (request.headers.get('Upgrade') === 'websocket') {
       try {
-        const durableObjectId = env.MARIMO_CONTAINER.idFromName("marimo-container");
-        const container = env.MARIMO_CONTAINER.get(durableObjectId);
+        const durableObjectId = env.MARIMO.idFromName("marimo-container");
+        const container = env.MARIMO.get(durableObjectId);
         const response = await container.fetch(request);
         
         if (response.status === 101) {
@@ -238,8 +297,8 @@ export default {
     console.log(`🔄 Proxying to container: ${request.method} ${url.pathname}`);
     
     try {
-      const durableObjectId = env.MARIMO_CONTAINER.idFromName("marimo-container");
-      const container = env.MARIMO_CONTAINER.get(durableObjectId);
+      const durableObjectId = env.MARIMO.idFromName("marimo-container");
+      const container = env.MARIMO.get(durableObjectId);
       
       console.log(`📡 Proxying request to container: ${request.method} ${url.pathname}`);
       const response = await container.fetch(request);
