@@ -23,6 +23,7 @@ RUN mkdir -p /app/notebooks
 # Set environment variables
 ENV MARIMO_SKIP_UPDATE_CHECK=1
 ENV MARIMO_LOG_LEVEL=INFO
+ENV PYTHONUNBUFFERED=1
 
 # Expose port
 EXPOSE 2718

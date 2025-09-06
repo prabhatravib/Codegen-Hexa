@@ -175,16 +175,43 @@ export default {
       }
     }
 
+    // If we're at root with ?id=..., redirect to the editor path so relative assets resolve correctly
+    if (idParam && url.pathname === '/' && request.method === 'GET') {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: '/edit/marimo_notebook.py',
+          'Cache-Control': 'no-store',
+          'Access-Control-Allow-Origin': '*',
+        }
+      })
+    }
+
     try {
       // Forward ALL requests to the Marimo container
+      // Normalize some paths so Marimo editor resolves correctly
+      let reqToSend: Request = request;
+      const path = url.pathname;
+      if (path === '/marimo_notebook.py' || path === '/edit' || path === '/edit/') {
+        const forwardTo = path === '/marimo_notebook.py' ? '/edit/marimo_notebook.py' : '/edit/marimo_notebook.py';
+        const target = new URL(`http://localhost:2718${forwardTo}`);
+        // Preserve search params except our own id param if present
+        for (const [k, v] of url.searchParams) {
+          if (k !== 'id') target.searchParams.set(k, v);
+        }
+        reqToSend = new Request(target.toString(), request);
+      }
+
       // Important: Preserve WebSocket/SSE upgrades by returning the original response
-      const response = await container.fetch(request);
+      const response = await container.fetch(reqToSend);
 
       const isWs = request.headers.get('Upgrade') === 'websocket' || response.status === 101;
       const accept = request.headers.get('Accept') || '';
-      const isSse = accept.includes('text/event-stream');
+      const isSseReq = accept.includes('text/event-stream');
+      const ct = response.headers.get('Content-Type') || '';
+      const isSseResp = ct.includes('text/event-stream');
 
-      if (isWs || isSse) {
+      if (isWs || isSseReq || isSseResp) {
         // Return untouched response so the upgrade/stream stays intact
         return response;
       }
@@ -194,6 +221,7 @@ export default {
       headers.set('Access-Control-Allow-Origin', '*');
       headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
       headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      headers.set('Cache-Control', 'no-store');
 
       return new Response(response.body, {
         status: response.status,
