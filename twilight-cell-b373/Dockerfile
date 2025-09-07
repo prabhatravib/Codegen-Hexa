@@ -1,33 +1,35 @@
-# Use Python 3.11 slim image
+# syntax=docker/dockerfile:1.4
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python dependencies
-COPY requirements.txt /app/
+# Python deps
+COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy app files
+COPY src/ /app/src/
+COPY *.py /app/
+COPY start.sh /app/
 
 # Create notebooks directory
 RUN mkdir -p /app/notebooks
 
-# Copy application files
-COPY start.sh /app/
-RUN chmod +x /app/start.sh
-
-# Copy source files
-COPY src/ /app/src/
-
 # Set environment variables
-ENV PYTHONUNBUFFERED=1
 ENV MARIMO_SKIP_UPDATE_CHECK=1
+ENV MARIMO_LOG_LEVEL=INFO
+ENV PYTHONUNBUFFERED=1
 
 # Expose port
 EXPOSE 2718
 
-# Use the start script as entrypoint
-ENTRYPOINT ["/app/start.sh"]
+# Make executable the start script
+RUN chmod +x /app/start.sh
+
+# Use the start script
+CMD ["/app/start.sh"]

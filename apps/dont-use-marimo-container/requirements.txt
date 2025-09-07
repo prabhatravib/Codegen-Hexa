@@ -1,3 +1,3 @@
-marimo>=0.14.0
-numpy>=1.24.0
+marimo
+numpy
 # plus your libs, e.g. pandas, altair, etc.

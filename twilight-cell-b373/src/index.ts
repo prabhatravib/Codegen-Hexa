@@ -6,53 +6,10 @@ export class MarimoContainerV2 extends Container {
   // Marimo listens on 2718
   defaultPort = 2718;
   requiredPorts = [2718];
-  sleepAfter = "2m"; // Further reduced to prevent memory buildup
-  
-  private lastContentHash: string = "";
-  private isStarting: boolean = false;
+  sleepAfter = "10m";
 
   constructor(ctx: DurableObject["ctx"], env: any) {
     super(ctx, env);
-  }
-
-  // Add memory cleanup method
-  async cleanup(): Promise<void> {
-    try {
-      await this.stop();
-    } catch (e) {
-      console.log('Cleanup error (ignored):', e);
-    }
-  }
-
-  // Add method to ensure container starts properly with memory optimization
-  async startAndWaitForPorts(port: number): Promise<void> {
-    try {
-      // Always start to ensure container is running
-      await this.start();
-      
-      // Wait for port to be available with shorter timeout to reduce memory pressure
-      let retries = 15; // 15 seconds timeout (reduced from 30)
-      while (retries > 0) {
-        try {
-          const testReq = new Request(`http://localhost:${port}/`);
-          const resp = await this.containerFetch(testReq, port);
-          if (resp.ok || resp.status < 500) {
-            console.log(`✅ Port ${port} is ready`);
-            return;
-          }
-        } catch (e) {
-          // Port not ready yet
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        retries--;
-      }
-      
-      throw new Error(`Port ${port} failed to become ready after 15 seconds`);
-    } catch (error) {
-      console.error(`Failed to start container on port ${port}:`, error);
-      throw error;
-    }
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -81,26 +38,16 @@ export class MarimoContainerV2 extends Container {
           });
         }
 
-        // Always restart container with new content to ensure updates take effect
-        // This is necessary because Marimo needs to reload the notebook file
+        // Restart container with the notebook content to ensure updates take effect
         try {
           await this.stop();
         } catch (_) {
-          // Ignore stop errors
+          // ignore stop errors (container may not be running)
         }
-
-        // Start with new content
-        await this.start({ 
-          envVars: { 
-            NOTEBOOK_CONTENT: content,
-            PORT: "2718"
-          } 
-        });
-        
-        // Wait for Marimo to be ready
+        await this.start({ envVars: { NOTEBOOK_CONTENT: content } });
         await this.startAndWaitForPorts(2718);
 
-        // Return the Worker root so clients keep the base path
+        // Return the Worker root; it reliably serves the Marimo UI
         const urlPath = "/";
         return new Response(JSON.stringify({ ok: true, url: urlPath, id, filename }), {
           status: 200,
@@ -137,12 +84,12 @@ export class MarimoContainerV2 extends Container {
     console.log(`🌐 Default routing to Marimo on port 2718: ${url.pathname}`);
     try {
       await this.startAndWaitForPorts(2718);
-      const resp = await this.containerFetch(toInternalEditorIfRoot(request), 2718);
+      const resp = await this.containerFetch(request, 2718);
       return await widenHtmlIfNeeded(resp);
     } catch (e) {
       console.warn('Default route proxy failed, retrying after ensuring readiness...', e);
       await this.startAndWaitForPorts(2718);
-      const resp2 = await this.containerFetch(toInternalEditorIfRoot(request), 2718);
+      const resp2 = await this.containerFetch(request, 2718);
       return await widenHtmlIfNeeded(resp2);
     }
   }
@@ -154,19 +101,6 @@ export class MarimoContainer extends MarimoContainerV2 {}
 
 
 // CORS headers
-function toInternalEditorIfRoot(request: Request): Request {
-  try {
-    const u = new URL(request.url);
-    const internal = new URL(`http://localhost:2718${u.pathname}${u.search}`);
-    if (u.pathname === '/' || u.pathname === '/index.html') {
-      internal.pathname = '/edit';
-    }
-    return new Request(internal.toString(), request);
-  } catch (_) {
-    return request;
-  }
-}
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -219,11 +153,10 @@ async function widenHtmlIfNeeded(response: Response): Promise<Response> {
   }
   let html = await response.text();
   try {
-    // Force a wide layout using supported enum values
-    // Marimo supports: 'normal' | 'compact' | 'medium' | 'full' | 'columns'
+    // Force widest layout
     html = html
-      .replace(/\"width\"\s*:\s*\"(normal|compact|medium|full|columns)\"/g, '\"width\":\"full\"')
-      .replace(/\"default_width\"\s*:\s*\"(normal|compact|medium|full|columns)\"/g, '\"default_width\":\"full\"');
+      .replace(/\"width\"\s*:\s*\"compact\"/g, '\"width\":\"max\"')
+      .replace(/\"default_width\"\s*:\s*\"(compact|medium|wide|full)\"/g, '\"default_width\":\"max\"');
   } catch (_) {}
   const css = `
     html, body, #root { width: 100% !important; }
@@ -256,7 +189,7 @@ export default {
     // Lightweight embedded viewer that guarantees wide layout
     if (url.pathname === '/embed' || url.pathname === '/viewer') {
       const ts = Date.now();
-      // Allow custom target= path, default to root
+      // Allow custom target= path, default to root of the Marimo app
       const target = url.searchParams.get('target') || '/';
       const iframeSrc = `${target}${target.includes('?') ? '&' : '?'}ts=${ts}&wide=1`;
       const html = `<!doctype html>
@@ -275,6 +208,7 @@ export default {
         </head>
         <body>
           <div class="wrap">
+            <div class="bar">Interactive Marimo Notebook · Embedded Wide View</div>
             <div class="frame">
               <iframe src="${iframeSrc}" title="Marimo" sandbox="allow-scripts allow-forms allow-popups allow-modals allow-same-origin"></iframe>
             </div>

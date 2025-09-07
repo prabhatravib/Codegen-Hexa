@@ -147,6 +147,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
             clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
           }}
         >
+          <div className="text-white text-sm font-medium">Voice Disabled</div>
         </div>
       )}
     </div>

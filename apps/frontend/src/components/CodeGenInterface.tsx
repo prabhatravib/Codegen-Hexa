@@ -272,6 +272,9 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
                   
                   {/* Action Buttons - Below the diagram */}
                   <div className="diagram-actions mt-4">
+                    <div className="text-sm text-white/60 mb-3 text-center">
+                      💡 <strong>Tip:</strong> Click on any node in the flowchart to ask deep dive questions about it!
+                    </div>
                     <div className="flex gap-3 justify-center">
                       <button onClick={handleGenerateMarimoNotebook} disabled={isLoading} className="btn-primary flex items-center justify-center disabled:opacity-50">
                         {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black" /> : (<><Code className="w-4 h-4 mr-2"/>Generate Marimo Notebook</>)}
@@ -298,7 +301,7 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
                     <div className="text-center text-white/60 p-8">
                       <div className="text-4xl mb-4">🔍</div>
                       <h4 className="text-lg font-medium mb-2">Deep Dive Panel</h4>
-                      <p className="text-sm">Click on any node in the flowchart to ask questions and get explanations.</p>
+                      <p className="text-sm">Click on any node in the flowchart to ask questions about it and get detailed explanations.</p>
                     </div>
                   </div>
                 )}
@@ -319,7 +322,7 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
 
       {/* Marimo Notebook Section - Appears below the flowchart when notebook is generated */}
       {step === 'marimo' && marimoNotebook && (
-        <div style={{ maxWidth: '1200px', margin: '2rem auto', padding: '0 1rem' }}>
+        <div style={{ width: '100vw', marginLeft: 'calc(-50vw + 50%)', padding: '0 1rem' }}>
           <MarimoNotebook
             marimoNotebook={marimoNotebook}
             onBack={backToFlowchart}
