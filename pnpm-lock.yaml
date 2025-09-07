@@ -191,16 +191,6 @@ importers:
         specifier: ^4.30.0
         version: 4.31.0(@cloudflare/workers-types@4.20250819.0)
 
-  apps/dont-use-marimo-container:
-    dependencies:
-      '@cloudflare/containers':
-        specifier: ^0.0.26
-        version: 0.0.26
-    devDependencies:
-      wrangler:
-        specifier: ^4.32.0
-        version: 4.32.0(@cloudflare/workers-types@4.20250819.0)
-
   apps/frontend:
     dependencies:
       '@dnd-kit/core':
@@ -345,19 +335,6 @@ importers:
       vite:
         specifier: ^6.2.0
         version: 6.3.5(@types/node@22.17.2)
-
-  apps/marimo-container-use:
-    dependencies:
-      '@cloudflare/containers':
-        specifier: ^0.0.26
-        version: 0.0.26
-    devDependencies:
-      typescript:
-        specifier: ^5.0.0
-        version: 5.7.3
-      wrangler:
-        specifier: ^4.32.0
-        version: 4.32.0(@cloudflare/workers-types@4.20250819.0)
 
   packages/shared:
     devDependencies:
@@ -5868,28 +5845,6 @@ packages:
       - utf-8-validate
     dev: true
 
-  /miniflare@4.20250816.1:
-    resolution: {integrity: sha512-2X8yMy5wWw0dF1pNU4kztzZgp0jWv2KMqAOOb2FeQ/b11yck4aczmYHi7UYD3uyOgtj8WFhwG/KdRWAaATTtRA==}
-    engines: {node: '>=18.0.0'}
-    hasBin: true
-    dependencies:
-      '@cspotcode/source-map-support': 0.8.1
-      acorn: 8.14.0
-      acorn-walk: 8.3.2
-      exit-hook: 2.2.1
-      glob-to-regexp: 0.4.1
-      sharp: 0.33.5
-      stoppable: 1.1.0
-      undici: 7.14.0
-      workerd: 1.20250816.0
-      ws: 8.18.0
-      youch: 4.1.0-beta.10
-      zod: 3.22.3
-    transitivePeerDependencies:
-      - bufferutil
-      - utf-8-validate
-    dev: true
-
   /minimatch@0.3.0:
     resolution: {integrity: sha512-WFX1jI1AaxNTZVOHLBVazwTWKaQjoykSzCBNXB72vDTCzopQGtyP91tKdFK5cv1+qMwPyiTu1HqUriqplI8pcA==}
     deprecated: Please update to minimatch 3.0.2 or higher to avoid a RegExp DoS issue
@@ -7609,32 +7564,6 @@ packages:
       blake3-wasm: 2.1.5
       esbuild: 0.25.4
       miniflare: 4.20250816.0
-      path-to-regexp: 6.3.0
-      unenv: 2.0.0-rc.19
-      workerd: 1.20250816.0
-    optionalDependencies:
-      fsevents: 2.3.3
-    transitivePeerDependencies:
-      - bufferutil
-      - utf-8-validate
-    dev: true
-
-  /wrangler@4.32.0(@cloudflare/workers-types@4.20250819.0):
-    resolution: {integrity: sha512-q7TRSavBW3Eg3pp4rxqKJwSK+u/ieFOBdNvUsq1P1EMmyj3//tN/iXDokFak+dkW0vDYjsVG3PfOfHxU92OS6w==}
-    engines: {node: '>=18.0.0'}
-    hasBin: true
-    peerDependencies:
-      '@cloudflare/workers-types': ^4.20250816.0
-    peerDependenciesMeta:
-      '@cloudflare/workers-types':
-        optional: true
-    dependencies:
-      '@cloudflare/kv-asset-handler': 0.4.0
-      '@cloudflare/unenv-preset': 2.6.2(unenv@2.0.0-rc.19)(workerd@1.20250816.0)
-      '@cloudflare/workers-types': 4.20250819.0
-      blake3-wasm: 2.1.5
-      esbuild: 0.25.4
-      miniflare: 4.20250816.1
       path-to-regexp: 6.3.0
       unenv: 2.0.0-rc.19
       workerd: 1.20250816.0
