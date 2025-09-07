@@ -29,7 +29,9 @@ def launch_notebook():
         'marimo', 'run', temp_file,
         '--port', str(port),
         '--headless',
-        '--no-browser'
+        '--no-browser',
+        '--presentation',
+        '--include-code'
     ])
     
     notebooks[notebook_id] = {

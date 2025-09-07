@@ -301,7 +301,7 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
                     <div className="text-center text-white/60 p-8">
                       <div className="text-4xl mb-4">🔍</div>
                       <h4 className="text-lg font-medium mb-2">Deep Dive Panel</h4>
-                      <p className="text-sm">Click on any node in the flowchart to ask questions about it and get detailed explanations.</p>
+                      <p className="text-sm">Click on any node in the flowchart to ask questions and get explanations.</p>
                     </div>
                   </div>
                 )}
