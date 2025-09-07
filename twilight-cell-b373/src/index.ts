@@ -6,10 +6,53 @@ export class MarimoContainerV2 extends Container {
   // Marimo listens on 2718
   defaultPort = 2718;
   requiredPorts = [2718];
-  sleepAfter = "10m";
+  sleepAfter = "2m"; // Further reduced to prevent memory buildup
+  
+  private lastContentHash: string = "";
+  private isStarting: boolean = false;
 
   constructor(ctx: DurableObject["ctx"], env: any) {
     super(ctx, env);
+  }
+
+  // Add memory cleanup method
+  async cleanup(): Promise<void> {
+    try {
+      await this.stop();
+    } catch (e) {
+      console.log('Cleanup error (ignored):', e);
+    }
+  }
+
+  // Add method to ensure container starts properly with memory optimization
+  async startAndWaitForPorts(port: number): Promise<void> {
+    try {
+      // Always start to ensure container is running
+      await this.start();
+      
+      // Wait for port to be available with shorter timeout to reduce memory pressure
+      let retries = 15; // 15 seconds timeout (reduced from 30)
+      while (retries > 0) {
+        try {
+          const testReq = new Request(`http://localhost:${port}/`);
+          const resp = await this.containerFetch(testReq, port);
+          if (resp.ok || resp.status < 500) {
+            console.log(`✅ Port ${port} is ready`);
+            return;
+          }
+        } catch (e) {
+          // Port not ready yet
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        retries--;
+      }
+      
+      throw new Error(`Port ${port} failed to become ready after 15 seconds`);
+    } catch (error) {
+      console.error(`Failed to start container on port ${port}:`, error);
+      throw error;
+    }
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -38,13 +81,23 @@ export class MarimoContainerV2 extends Container {
           });
         }
 
-        // Restart container with the notebook content to ensure updates take effect
+        // Always restart container with new content to ensure updates take effect
+        // This is necessary because Marimo needs to reload the notebook file
         try {
           await this.stop();
         } catch (_) {
-          // ignore stop errors (container may not be running)
+          // Ignore stop errors
         }
-        await this.start({ envVars: { NOTEBOOK_CONTENT: content } });
+
+        // Start with new content
+        await this.start({ 
+          envVars: { 
+            NOTEBOOK_CONTENT: content,
+            PORT: "2718"
+          } 
+        });
+        
+        // Wait for Marimo to be ready
         await this.startAndWaitForPorts(2718);
 
         // Return the Worker root so clients keep the base path
