@@ -70,11 +70,13 @@ export class MarimoContainerV2 extends Container {
       console.log(`🌐 Routing to Marimo (rewritten): ${internalPath || "/"}`);
       try {
         await this.startAndWaitForPorts(2718);
-        return await this.containerFetch(req, 2718);
+        const resp = await this.containerFetch(req, 2718);
+        return await widenHtmlIfNeeded(resp);
       } catch (e) {
         console.warn('Proxy to Marimo failed, retrying after ensuring readiness...', e);
         await this.startAndWaitForPorts(2718);
-        return this.containerFetch(req, 2718);
+        const resp2 = await this.containerFetch(req, 2718);
+        return await widenHtmlIfNeeded(resp2);
       }
     }
 
@@ -82,11 +84,13 @@ export class MarimoContainerV2 extends Container {
     console.log(`🌐 Default routing to Marimo on port 2718: ${url.pathname}`);
     try {
       await this.startAndWaitForPorts(2718);
-      return await this.containerFetch(request, 2718);
+      const resp = await this.containerFetch(request, 2718);
+      return await widenHtmlIfNeeded(resp);
     } catch (e) {
       console.warn('Default route proxy failed, retrying after ensuring readiness...', e);
       await this.startAndWaitForPorts(2718);
-      return this.containerFetch(request, 2718);
+      const resp2 = await this.containerFetch(request, 2718);
+      return await widenHtmlIfNeeded(resp2);
     }
   }
 }
@@ -141,11 +145,78 @@ function shouldProxy(url: URL): boolean {
   return true;
 }
 
+// Inject CSS and config tweaks to widen Marimo UI
+async function widenHtmlIfNeeded(response: Response): Promise<Response> {
+  const ct = response.headers.get('content-type') || '';
+  if (!ct.includes('text/html')) {
+    return response;
+  }
+  let html = await response.text();
+  try {
+    // Force widest layout
+    html = html
+      .replace(/\"width\"\s*:\s*\"compact\"/g, '\"width\":\"max\"')
+      .replace(/\"default_width\"\s*:\s*\"(compact|medium|wide|full)\"/g, '\"default_width\":\"max\"');
+  } catch (_) {}
+  const css = `
+    html, body, #root { width: 100% !important; }
+    /* Expand content width variables used by Marimo's CSS */
+    :root, #root, #App, .mo-app, .mo-root {
+      --content-width: 100vw !important;
+      --content-width-medium: 100vw !important;
+    }
+    main, .mo-app, .mo-root, .mo-container, [class*="container"], [class*="content"], [class*="root"], [class*="app"] {
+      max-width: 100% !important; width: 100% !important;
+    }
+    .cm-editor, .cell, .mo-cell, .mo-output, pre, code {
+      max-width: 100% !important; width: 100% !important;
+    }
+    [style*="max-width"], [class*="center"] { max-width: 100% !important; }
+  `;
+  const injected = html.includes('</head>')
+    ? html.replace('</head>', `<style>${css}</style></head>`)
+    : `<style>${css}</style>` + html;
+  const newHeaders = new Headers(response.headers);
+  return new Response(injected, { status: response.status, statusText: response.statusText, headers: newHeaders });
+}
+
 export default {
   async fetch(request: Request, env: any) {
     const url = new URL(request.url);
     
     console.log(`🔍 Handling request: ${request.method} ${url.pathname}`);
+    
+    // Lightweight embedded viewer that guarantees wide layout
+    if (url.pathname === '/embed' || url.pathname === '/viewer') {
+      const ts = Date.now();
+      // Allow custom target= path, default to root of the Marimo app
+      const target = url.searchParams.get('target') || '/';
+      const iframeSrc = `${target}${target.includes('?') ? '&' : '?'}ts=${ts}&wide=1`;
+      const html = `<!doctype html>
+        <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Marimo Notebook – Embedded</title>
+          <style>
+            html, body { margin:0; padding:0; height:100%; background:#0b0b0f; }
+            .wrap { position:fixed; inset:0; display:flex; flex-direction:column; }
+            .bar { padding:.5rem .75rem; color:#c9c9d1; background:#14141b; border-bottom:1px solid #22232f; font: 500 14px system-ui, sans-serif; }
+            .frame { flex:1; position:relative; }
+            .frame iframe { position:absolute; inset:0; width:100%; height:100%; border:0; background:#fff; }
+          </style>
+        </head>
+        <body>
+          <div class="wrap">
+            <div class="bar">Interactive Marimo Notebook · Embedded Wide View</div>
+            <div class="frame">
+              <iframe src="${iframeSrc}" title="Marimo" sandbox="allow-scripts allow-forms allow-popups allow-modals allow-same-origin"></iframe>
+            </div>
+          </div>
+        </body>
+        </html>`;
+      return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html' } });
+    }
     
     // Debug route to check container port configuration
     if (url.pathname === '/container/port') {

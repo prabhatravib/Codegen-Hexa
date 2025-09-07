@@ -273,13 +273,56 @@ export default {
     // Forward ALL requests to the Marimo container
     // This ensures the notebook interface is properly served
     const response = await container.fetch(request);
-    
+
     // Add CORS headers to all responses from the container
     const newHeaders = new Headers(response.headers);
     newHeaders.set('Access-Control-Allow-Origin', 'https://codegen-hexa.prabhatravib.workers.dev');
     newHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     newHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    
+
+    // If HTML, inject a small CSS override to widen the Marimo app content
+    const contentType = response.headers.get('content-type') || '';
+    const isHtml = request.method === 'GET' && contentType.includes('text/html');
+    if (isHtml) {
+      let html = await response.text();
+      // Force app width from compact/medium to max
+      try {
+        html = html
+          .replace(/\"width\"\s*:\s*\"compact\"/g, '\"width\":\"max\"')
+          .replace(/\"default_width\"\s*:\s*\"(compact|medium|wide|full)\"/g, '\"default_width\":\"max\"');
+      } catch (_) {
+        // no-op: best-effort replacement
+      }
+      const widenCss = `
+        /* Force Marimo UI to use the full available width */
+        html, body, #root { width: 100% !important; }
+        :root, #root, #App, .mo-app, .mo-root {
+          --content-width: 100vw !important;
+          --content-width-medium: 100vw !important;
+        }
+        main, .container, .content, .app, .App, .mo-root, .mo-app, .mo-container,
+        [class*="container"], [class*="content"], [class*="root"], [class*="app"] {
+          max-width: 100% !important;
+          width: 100% !important;
+        }
+        /* Make code/editor regions stretch too */
+        .cm-editor, .cell, .mo-cell, .mo-output, .markdown-body, pre, code {
+          max-width: 100% !important;
+          width: 100% !important;
+        }
+        /* Ensure any center wrappers do not clamp width */
+        [style*="max-width"], [class*="center"] { max-width: 100% !important; }
+      `;
+      const injected = html.includes('</head>')
+        ? html.replace('</head>', `<style>${widenCss}</style></head>`)
+        : `<style>${widenCss}</style>` + html;
+      return new Response(injected, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders,
+      });
+    }
+
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
@@ -287,4 +330,3 @@ export default {
     });
   },
 };
-

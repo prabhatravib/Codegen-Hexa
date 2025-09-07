@@ -322,10 +322,12 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
 
       {/* Marimo Notebook Section - Appears below the flowchart when notebook is generated */}
       {step === 'marimo' && marimoNotebook && (
-        <MarimoNotebook
-          marimoNotebook={marimoNotebook}
-          onBack={backToFlowchart}
-        />
+        <div style={{ width: '100vw', marginLeft: 'calc(-50vw + 50%)', padding: '0 1rem' }}>
+          <MarimoNotebook
+            marimoNotebook={marimoNotebook}
+            onBack={backToFlowchart}
+          />
+        </div>
       )}
 
       {error && (

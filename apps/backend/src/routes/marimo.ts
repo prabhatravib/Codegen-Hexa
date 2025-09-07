@@ -120,10 +120,15 @@ marimoRouter.post('/generate', async (c) => {
       return c.json({ success: false, error: 'Failed to save notebook to container', attempts }, 502)
     }
     // Ensure absolute URL for the frontend
-    let marimoUrlAbs = containerData.url
+    // Prefer explicit embedded viewer route
+    let marimoUrlPath = containerData.url
+    if (!marimoUrlPath || marimoUrlPath === '/' || marimoUrlPath === '/index.html') {
+      marimoUrlPath = '/embed'
+    }
+    let marimoUrlAbs = marimoUrlPath
     if (marimoUrlAbs && !/^https?:\/\//i.test(marimoUrlAbs)) {
       const base = c.env.MARIMO_CONTAINER_URL || 'https://twilight-cell-b373.prabhatravib.workers.dev'
-      marimoUrlAbs = new URL(marimoUrlAbs, base).toString()
+      marimoUrlAbs = new URL(marimoUrlPath, base).toString()
     }
     
     // Readiness poll: wait briefly for the editor to respond 200
@@ -137,6 +142,14 @@ marimoRouter.post('/generate', async (c) => {
     } catch (e) {
       // Non-fatal, DO will also ensure readiness before proxying
     }
+
+    // Bust service worker/edge caches to ensure we get latest HTML we may rewrite
+    try {
+      const u = new URL(marimoUrlAbs)
+      u.searchParams.set('ts', String(Date.now()))
+      u.searchParams.set('wide', '1')
+      marimoUrlAbs = u.toString()
+    } catch (_) {}
 
     return c.json({
       success: true,

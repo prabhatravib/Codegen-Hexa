@@ -3,8 +3,9 @@
   background: #1a1b26;
   border-radius: 8px;
   overflow: hidden;
-  margin: 2rem auto;
-  max-width: 95vw;
+  /* Make container full-width within its parent */
+  margin: 2rem 0;
+  width: 100%;
   border: 1px solid #2d2e3f;
   display: flex;
   flex-direction: column;

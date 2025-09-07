@@ -25,7 +25,15 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
           if (marimoNotebook.startsWith('http')) {
             // It's a URL to the Marimo container, use it directly
             console.log('Setting up Marimo notebook with URL:', marimoNotebook)
-            setMarimoUrl(marimoNotebook)
+            let finalUrl = marimoNotebook
+            try {
+              const u = new URL(marimoNotebook)
+              // Bust caches and request wide layout hint
+              u.searchParams.set('ts', String(Date.now()))
+              u.searchParams.set('wide', '1')
+              finalUrl = u.toString()
+            } catch (e) { /* ignore */ }
+            setMarimoUrl(finalUrl)
             setStatus('ready')
           } else {
             // Fallback: if it's still raw content, show error
@@ -84,7 +92,14 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
     // Retry - check if we have notebook URL
     setTimeout(() => {
       if (marimoNotebook && marimoNotebook.startsWith('http')) {
-        setMarimoUrl(marimoNotebook)
+        try {
+          const u = new URL(marimoNotebook)
+          u.searchParams.set('ts', String(Date.now()))
+          u.searchParams.set('wide', '1')
+          setMarimoUrl(u.toString())
+        } catch {
+          setMarimoUrl(marimoNotebook)
+        }
         setStatus('ready')
       } else {
         setError('No valid notebook URL received from server')
@@ -111,6 +126,7 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="marimo-notebook-container"
+      style={{ width: '100%', maxWidth: '100%' }}
     >
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold text-white">Interactive Marimo Notebook</h3>
@@ -162,7 +178,7 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
             ref={iframeRef}
             src={marimoUrl}
             className="w-full min-h-[800px] h-full border border-gray-600 rounded-lg bg-gray-900"
-            style={{ height: '800px', minHeight: '800px' }}
+            style={{ height: '800px', minHeight: '800px', width: '100%', maxWidth: '100%' }}
             title="Interactive Marimo Notebook"
             sandbox="allow-scripts allow-forms allow-popups allow-modals allow-same-origin"
             onLoad={() => {

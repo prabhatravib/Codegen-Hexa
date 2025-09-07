@@ -21,12 +21,13 @@ if [ -n "${NOTEBOOK_CONTENT:-}" ]; then
 else
   echo "[start] No NOTEBOOK_CONTENT provided; writing default notebook"
   cat > "$NOTEBOOK_PATH" << 'EOF'
-import marimo as mo
+import marimo
 
-app = mo.App()
+app = marimo.App()
 
 @app.cell
 def __():
+    import marimo as mo
     mo.md("""
     # Marimo is starting
     This is a basic Marimo notebook. New content will be loaded here when you generate a notebook.
