@@ -21,9 +21,9 @@ if [ -n "${NOTEBOOK_CONTENT:-}" ]; then
 else
   echo "[start] No NOTEBOOK_CONTENT provided; writing default notebook"
   cat > "$NOTEBOOK_PATH" << 'EOF'
-import marimo
+import marimo as mo
 
-app = marimo.App()
+app = mo.App()
 
 @app.cell
 def __():
@@ -62,32 +62,16 @@ except Exception as e:
     print("[start] marimo import failed:", e)
 PY
 
-# Validate notebook syntax; if invalid, write a safe fallback
-if ! python - <<PY
+# Validate notebook syntax; if invalid, exit (no graceful fallback)
+python - <<PY
 import py_compile, sys
 try:
     py_compile.compile("$NOTEBOOK_PATH", doraise=True)
     print("[start] Notebook syntax OK")
 except Exception as e:
     print("[start] Notebook syntax error:", e)
-    sys.exit(42)
+    sys.exit(1)
 PY
-then
-  echo "[start] Overwriting with safe fallback notebook due to syntax error"
-  cat > "$NOTEBOOK_PATH" << 'EOF'
-import marimo as mo
-
-app = mo.App()
-
-@app.cell
-def __():
-    mo.md("""
-    # Notebook Error
-    The generated content had a syntax error. This is a safe fallback.
-    """)
-    return None
-EOF
-fi
 
 # Start Marimo editor with file first (CLI expects path as positional)
 echo "[start] Exec: python -m marimo edit $NOTEBOOK_PATH --host 0.0.0.0 --port $PORT_TO_USE --headless --no-token --skip-update-check"
