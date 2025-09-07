@@ -272,9 +272,6 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
                   
                   {/* Action Buttons - Below the diagram */}
                   <div className="diagram-actions mt-4">
-                    <div className="text-sm text-white/60 mb-3 text-center">
-                      💡 <strong>Tip:</strong> Click on any node in the flowchart to ask deep dive questions about it!
-                    </div>
                     <div className="flex gap-3 justify-center">
                       <button onClick={handleGenerateMarimoNotebook} disabled={isLoading} className="btn-primary flex items-center justify-center disabled:opacity-50">
                         {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black" /> : (<><Code className="w-4 h-4 mr-2"/>Generate Marimo Notebook</>)}

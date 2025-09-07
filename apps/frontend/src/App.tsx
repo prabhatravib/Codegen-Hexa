@@ -26,7 +26,7 @@ function App() {
       <div className="min-h-screen" style={{ background: '#000' }}>
         <header className="py-6 text-center">
           <h1 className="text-4xl font-extrabold text-white">
-            PiText <span className="text-[#FFD600]">CodeGen!</span>
+            PiText <span className="text-[#FFD600]">CodeGen</span>
           </h1>
           <p className="text-lg mt-2 text-gray-300">
             From idea to interactive code, instantly.
