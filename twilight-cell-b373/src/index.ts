@@ -3,9 +3,9 @@ import type { DurableObject } from "cloudflare:workers";
 export { NotebookStore } from './notebook_store';
 
 export class MarimoContainerV2 extends Container {
-  // Marimo listens on 2718
-  defaultPort = 2718;
-  requiredPorts = [2718];
+  // Listen on Cloudflare's default app port
+  defaultPort = 8080;
+  requiredPorts = [8080];
   sleepAfter = "10m";
 
   constructor(ctx: DurableObject["ctx"], env: any) {
@@ -15,6 +15,11 @@ export class MarimoContainerV2 extends Container {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     console.log(`🔍 Container fetch called: ${request.method} ${url.pathname}`);
+
+    // Short-circuit service worker requests to avoid unnecessary container startup
+    if (url.pathname === "/public-files-sw.js") {
+      return new Response("", { status: 404 });
+    }
 
     // Handle minimal API inside the DO
     if (url.pathname === "/api/health" && request.method === "GET") {
@@ -45,7 +50,7 @@ export class MarimoContainerV2 extends Container {
           // ignore stop errors (container may not be running)
         }
         await this.start({ envVars: { NOTEBOOK_CONTENT: content } });
-        await this.startAndWaitForPorts(2718);
+        await this.startAndWaitForPorts(this.defaultPort);
 
         // Return the Worker root; it reliably serves the Marimo UI
         const urlPath = "/";
@@ -61,35 +66,35 @@ export class MarimoContainerV2 extends Container {
       }
     }
 
-    // Marimo UI on 2718 (proxy everything under /marimo/*)
+    // Marimo UI on defaultPort (proxy everything under /marimo/*)
     if (url.pathname.startsWith("/marimo/")) {
       // Rewrite /marimo/* -> /* for the container, since Marimo serves /edit/* at root
       const internalPath = url.pathname.replace(/^\/marimo/, "");
-      const target = new URL(`http://localhost:2718${internalPath}${url.search}`);
+      const target = new URL(`http://localhost:${this.defaultPort}${internalPath}${url.search}`);
       const req = new Request(target.toString(), request);
       console.log(`🌐 Routing to Marimo (rewritten): ${internalPath || "/"}`);
       try {
-        await this.startAndWaitForPorts(2718);
-        const resp = await this.containerFetch(req, 2718);
+        await this.startAndWaitForPorts(this.defaultPort);
+        const resp = await this.containerFetch(req, this.defaultPort);
         return await widenHtmlIfNeeded(resp);
       } catch (e) {
         console.warn('Proxy to Marimo failed, retrying after ensuring readiness...', e);
-        await this.startAndWaitForPorts(2718);
-        const resp2 = await this.containerFetch(req, 2718);
+        await this.startAndWaitForPorts(this.defaultPort);
+        const resp2 = await this.containerFetch(req, this.defaultPort);
         return await widenHtmlIfNeeded(resp2);
       }
     }
 
-    // Default: route to Marimo editor port 2718
-    console.log(`🌐 Default routing to Marimo on port 2718: ${url.pathname}`);
+    // Default: route to Marimo on defaultPort
+    console.log(`🌐 Default routing to Marimo on port ${this.defaultPort}: ${url.pathname}`);
     try {
-      await this.startAndWaitForPorts(2718);
-      const resp = await this.containerFetch(request, 2718);
+      await this.startAndWaitForPorts(this.defaultPort);
+      const resp = await this.containerFetch(request, this.defaultPort);
       return await widenHtmlIfNeeded(resp);
     } catch (e) {
       console.warn('Default route proxy failed, retrying after ensuring readiness...', e);
-      await this.startAndWaitForPorts(2718);
-      const resp2 = await this.containerFetch(request, 2718);
+      await this.startAndWaitForPorts(this.defaultPort);
+      const resp2 = await this.containerFetch(request, this.defaultPort);
       return await widenHtmlIfNeeded(resp2);
     }
   }
@@ -220,7 +225,7 @@ export default {
     
     // Debug route to check container port configuration
     if (url.pathname === '/container/port') {
-      return new Response(String(env.MARIMO_PORT ?? "2718"), { headers: { "content-type": "text/plain" } });
+      return new Response(String(env.MARIMO_PORT ?? "8080"), { headers: { "content-type": "text/plain" } });
     }
     
     // Handle CORS preflight for API endpoints

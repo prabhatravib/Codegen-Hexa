@@ -46,7 +46,7 @@ def main():
         cmd = [
             "python", "-m", "marimo", "edit",
             "--host", "0.0.0.0",
-            "--port", "2718",
+            "--port", "8080",
             "--headless",
             "--no-token",
             str(notebook_path)

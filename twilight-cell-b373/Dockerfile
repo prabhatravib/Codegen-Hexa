@@ -26,7 +26,7 @@ ENV MARIMO_LOG_LEVEL=INFO
 ENV PYTHONUNBUFFERED=1
 
 # Expose port
-EXPOSE 2718
+EXPOSE 8080
 
 # Make executable the start script
 RUN chmod +x /app/start.sh

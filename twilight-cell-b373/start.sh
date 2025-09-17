@@ -48,8 +48,8 @@ fi
 
 echo "[start] Notebook at: $NOTEBOOK_PATH"
 
-# Bind to provided PORT if set, else default 2718
-PORT_TO_USE="${PORT:-2718}"
+# Bind to provided PORT if set, else default 8080
+PORT_TO_USE="${PORT:-8080}"
 echo "[start] Using port: $PORT_TO_USE"
 
 # Log Python and Marimo versions for diagnostics
