@@ -28,18 +28,52 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
     return unsubscribe
   }, [])
 
-  // Send diagram data to iframe when it changes
+  // Send diagram data to voice worker via API when it changes (regardless of voice state)
+  const lastSentDataRef = useRef<string | null>(null)
+  
   useEffect(() => {
-    if (diagramData && iframeRef.current && isVoiceEnabled) {
-      console.log('📤 Sending diagram data to HexaWorker iframe:', diagramData)
+    if (diagramData) {
+      // Create a hash to prevent duplicate sends
+      const dataHash = JSON.stringify({
+        mermaidCode: diagramData.mermaidCode,
+        prompt: diagramData.prompt
+      })
       
-      // Send diagram data to the iframe via postMessage
-      iframeRef.current.contentWindow?.postMessage({
-        type: 'diagram_data',
-        data: diagramData
-      }, 'https://hexa-worker.prabhatravib.workers.dev')
+      if (dataHash === lastSentDataRef.current) {
+        console.log('⏭️ Skipping duplicate diagram data send')
+        return
+      }
+      
+      lastSentDataRef.current = dataHash
+      console.log('📤 Sending diagram data to voice worker via API:', diagramData)
+      
+      // Send diagram data to voice worker via API call
+      fetch('https://hexa-worker.prabhatravib.workers.dev/api/external-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mermaidCode: diagramData.mermaidCode,
+          diagramImage: diagramData.diagramImage,
+          prompt: diagramData.prompt,
+          type: 'diagram'
+        })
+      }).then(response => {
+        if (response.ok) {
+          console.log('✅ Diagram data sent to voice worker successfully')
+        } else {
+          console.error('❌ Failed to send diagram data to voice worker:', response.status)
+          // Reset hash on failure so it can be retried
+          lastSentDataRef.current = null
+        }
+      }).catch(error => {
+        console.error('❌ Error sending diagram data to voice worker:', error)
+        // Reset hash on error so it can be retried
+        lastSentDataRef.current = null
+      })
     }
-  }, [diagramData, isVoiceEnabled])
+  }, [diagramData])
 
   const toggleVoice = () => {
     setIsVoiceEnabled(!isVoiceEnabled)
@@ -115,20 +149,14 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
           }}
           title="Hexa Voice Agent"
           allow="microphone"
-          // Send diagram data to iframe when it loads
+          // Handle iframe load
           onLoad={() => {
             console.log('🔄 Iframe loaded')
             if (sessionId) {
               console.log('🆔 Voice session started with session ID:', sessionId)
             }
-            // Send diagram data immediately if available
-            if (diagramData) {
-              console.log('📤 Sending diagram data on iframe load:', diagramData)
-              iframeRef.current?.contentWindow?.postMessage({
-                type: 'diagram_data',
-                data: diagramData
-              }, 'https://hexa-worker.prabhatravib.workers.dev')
-            }
+            // Diagram data is already sent via API, no postMessage needed
+            console.log('✅ Voice worker iframe loaded - diagram data should be available via API')
           }}
         />
       ) : (

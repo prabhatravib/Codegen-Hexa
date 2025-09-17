@@ -1,4 +1,4 @@
-#!/bin/sh
+﻿#!/bin/sh
 set -euo pipefail
 
 echo "[start] Marimo container starting..."

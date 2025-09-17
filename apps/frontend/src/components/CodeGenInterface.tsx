@@ -78,62 +78,14 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
     }
   }
 
-  // Track pending requests to prevent concurrent calls
-  const pendingRequestRef = useRef<Promise<void> | null>(null)
 
   const handleDiscussionRequest = async (diagramContext: DiagramData) => {
     console.log('Hexagon discussion started for diagram:', diagramContext)
     
-    // Check if there's already a pending request
-    if (pendingRequestRef.current) {
-      console.log('⏳ Waiting for previous request to complete')
-      await pendingRequestRef.current
-    }
-    
-    // Create new request promise
-    pendingRequestRef.current = (async () => {
-      try {
-        // Send diagram data to hexagon worker external data endpoint
-        const response = await fetch('https://hexa-worker.prabhatravib.workers.dev/api/external-data', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            mermaidCode: diagramContext.mermaidCode,
-            diagramImage: diagramContext.diagramImage,
-            prompt: diagramContext.prompt,
-            type: 'diagram'
-          })
-        })
-
-        if (!response.ok) {
-          // Handle 409 Conflict - investigate why hexagon worker is rejecting the data
-          if (response.status === 409) {
-            console.error('❌ 409 Conflict: Hexagon worker rejected the diagram data')
-            const errorText = await response.text()
-            console.error('Error details:', errorText)
-            throw new Error(`Hexagon worker rejected data: ${errorText}`)
-          }
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        const result = await response.json()
-        console.log('✅ Diagram data sent to hexagon worker:', result)
-        
-        // ✅ Update status to show "Code Flow Sent" after successful API call
-        onCodeFlowStatusChange?.('sent')
-        
-      } catch (error) {
-        console.error('❌ Error sending data to hexagon worker:', error)
-      } finally {
-        // Clear the pending request
-        pendingRequestRef.current = null
-      }
-    })()
-    
-    // Wait for the request to complete
-    await pendingRequestRef.current
+    // Diagram data is now automatically sent to voice worker via HexaWorker component
+    // Just update the status to show "Code Flow Sent"
+    onCodeFlowStatusChange?.('sent')
+    console.log('✅ Diagram data will be sent to voice worker automatically')
   }
 
   const handleGenerateDiagram = async () => {
