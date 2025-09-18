@@ -1,18 +1,13 @@
 {
   "name": "twilight-cell-b373",
   "main": "src/index.ts",
-  "compatibility_date": "2025-08-22",
+  "compatibility_date": "2025-09-01",
   "observability": { "enabled": true },
   "durable_objects": {
     "bindings": [
-      { "name": "MARIMO", "class_name": "MarimoContainer" },
-      { "name": "NOTEBOOK_STORE", "class_name": "NotebookStore" }
+      { "name": "MARIMO", "class_name": "MarimoContainer" }
     ]
   },
-  "migrations": [
-    { "tag": "add-notebook-store", "new_classes": ["NotebookStore"] }
-  ],
-  
   "containers": [
     {
       "class_name": "MarimoContainer",

@@ -3,33 +3,27 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# System deps
+# Install system dependencies required for popular Python packages used in Marimo notebooks
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Python deps
+# Install Python dependencies
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy app files
+# Copy application sources
 COPY src/ /app/src/
 COPY *.py /app/
-COPY start.sh /app/
+COPY start.sh /app/start.sh
 
-# Create notebooks directory
+# Ensure notebooks directory exists for generated content
 RUN mkdir -p /app/notebooks
 
-# Set environment variables
-ENV MARIMO_SKIP_UPDATE_CHECK=1
-ENV MARIMO_LOG_LEVEL=INFO
-ENV PYTHONUNBUFFERED=1
+ENV MARIMO_SKIP_UPDATE_CHECK=1     MARIMO_LOG_LEVEL=INFO     PYTHONUNBUFFERED=1
 
-# Expose port
 EXPOSE 8080
 
-# Make executable the start script
 RUN chmod +x /app/start.sh
 
-# Use the start script
 CMD ["/app/start.sh"]

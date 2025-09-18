@@ -1,4 +1,4 @@
-﻿#!/bin/sh
+#!/bin/sh
 set -euo pipefail
 
 echo "[start] Marimo container starting..."
@@ -46,6 +46,23 @@ def __():
 EOF
 fi
 
+# Ensure the notebook defines at least one cell; if not, provide a safe fallback
+if ! grep -q "@app.cell" "$NOTEBOOK_PATH"; then
+  echo "[start] Notebook missing @app.cell; writing fallback notebook"
+  cat > "$NOTEBOOK_PATH" << 'EOF'
+import marimo as mo
+
+app = mo.App()
+
+@app.cell
+def __():
+    mo.md("""
+    # Missing Content
+    The provided notebook did not define any cells. A fallback cell has been generated.
+    """)
+    return None
+EOF
+fi
 echo "[start] Notebook at: $NOTEBOOK_PATH"
 
 # Bind to provided PORT if set, else default 8080

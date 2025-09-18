@@ -1,14 +1,19 @@
-import { Container } from "@cloudflare/containers";
+import { Container, getContainer } from "@cloudflare/containers";
 import type { DurableObject } from "cloudflare:workers";
 export { NotebookStore } from './notebook_store';
 
-export class MarimoContainerV2 extends Container {
-  // Listen on Cloudflare's default app port
+export interface Env {
+  // The binding name below must match wrangler.jsonc "containers[].name"
+  MARIMO: DurableObjectNamespace<MarimoContainer>;
+}
+
+export class MarimoContainer extends Container {
+  // Keep these in code as an extra guard; wrangler also sets them
   defaultPort = 8080;
   requiredPorts = [8080];
-  sleepAfter = "10m";
+  sleepAfter = "15m";
 
-  constructor(ctx: DurableObject["ctx"], env: any) {
+  constructor(ctx: DurableObject["ctx"], env: Env) {
     super(ctx, env);
   }
 
@@ -18,7 +23,12 @@ export class MarimoContainerV2 extends Container {
 
     // Short-circuit service worker requests to avoid unnecessary container startup
     if (url.pathname === "/public-files-sw.js") {
-      return new Response("", { status: 404 });
+      const body = `self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', () => self.clients.claim());`;
+      return new Response(body, {
+        status: 200,
+        headers: { "Content-Type": "application/javascript" },
+      });
     }
 
     // Handle minimal API inside the DO
@@ -74,11 +84,15 @@ export class MarimoContainerV2 extends Container {
       const req = new Request(target.toString(), request);
       console.log(`🌐 Routing to Marimo (rewritten): ${internalPath || "/"}`);
       try {
+        // Ensure container is started and ready
+        await this.start();
         await this.startAndWaitForPorts(this.defaultPort);
         const resp = await this.containerFetch(req, this.defaultPort);
         return await widenHtmlIfNeeded(resp);
       } catch (e) {
         console.warn('Proxy to Marimo failed, retrying after ensuring readiness...', e);
+        await this.stop();
+        await this.start();
         await this.startAndWaitForPorts(this.defaultPort);
         const resp2 = await this.containerFetch(req, this.defaultPort);
         return await widenHtmlIfNeeded(resp2);
@@ -88,20 +102,35 @@ export class MarimoContainerV2 extends Container {
     // Default: route to Marimo on defaultPort
     console.log(`🌐 Default routing to Marimo on port ${this.defaultPort}: ${url.pathname}`);
     try {
+      // Ensure container is started and ready
+      console.log('🚀 Starting container...');
+      await this.start();
+      console.log('⏳ Waiting for ports to be ready...');
       await this.startAndWaitForPorts(this.defaultPort);
+      console.log('✅ Container is ready, proxying request...');
+      
       const resp = await this.containerFetch(request, this.defaultPort);
       return await widenHtmlIfNeeded(resp);
     } catch (e) {
-      console.warn('Default route proxy failed, retrying after ensuring readiness...', e);
-      await this.startAndWaitForPorts(this.defaultPort);
-      const resp2 = await this.containerFetch(request, this.defaultPort);
-      return await widenHtmlIfNeeded(resp2);
+      console.error('❌ Default route proxy failed:', e);
+      console.log('🔄 Retrying after ensuring readiness...');
+      
+      try {
+        // Force restart the container
+        await this.stop();
+        await this.start();
+        await this.startAndWaitForPorts(this.defaultPort);
+        
+        const resp2 = await this.containerFetch(request, this.defaultPort);
+        return await widenHtmlIfNeeded(resp2);
+      } catch (e2) {
+        console.error('❌ Retry also failed:', e2);
+        throw e2;
+      }
     }
   }
 }
 
-// Export class name expected by wrangler bindings
-export class MarimoContainer extends MarimoContainerV2 {}
 
 
 
@@ -150,19 +179,14 @@ function shouldProxy(url: URL): boolean {
   return true;
 }
 
-// Inject CSS and config tweaks to widen Marimo UI
+// Inject CSS to widen Marimo UI
 async function widenHtmlIfNeeded(response: Response): Promise<Response> {
   const ct = response.headers.get('content-type') || '';
   if (!ct.includes('text/html')) {
     return response;
   }
   let html = await response.text();
-  try {
-    // Force widest layout
-    html = html
-      .replace(/\"width\"\s*:\s*\"compact\"/g, '\"width\":\"max\"')
-      .replace(/\"default_width\"\s*:\s*\"(compact|medium|wide|full)\"/g, '\"default_width\":\"max\"');
-  } catch (_) {}
+  // Leave Marimo config widths untouched; CSS below widens layout.
   const css = `
     html, body, #root { width: 100% !important; }
     /* Expand content width variables used by Marimo's CSS */
@@ -186,239 +210,14 @@ async function widenHtmlIfNeeded(response: Response): Promise<Response> {
 }
 
 export default {
-  async fetch(request: Request, env: any) {
-    const url = new URL(request.url);
-    
-    console.log(`🔍 Handling request: ${request.method} ${url.pathname}`);
-    
-    // Lightweight embedded viewer that guarantees wide layout
-    if (url.pathname === '/embed' || url.pathname === '/viewer') {
-      const ts = Date.now();
-      // Allow custom target= path, default to root of the Marimo app
-      const target = url.searchParams.get('target') || '/';
-      const iframeSrc = `${target}${target.includes('?') ? '&' : '?'}ts=${ts}&wide=1`;
-      const html = `<!doctype html>
-        <html>
-        <head>
-          <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>Marimo Notebook – Embedded</title>
-          <style>
-            html, body { margin:0; padding:0; height:100%; background:#0b0b0f; }
-            .wrap { position:fixed; inset:0; display:flex; flex-direction:column; }
-            .bar { padding:.5rem .75rem; color:#c9c9d1; background:#14141b; border-bottom:1px solid #22232f; font: 500 14px system-ui, sans-serif; }
-            .frame { flex:1; position:relative; }
-            .frame iframe { position:absolute; inset:0; width:100%; height:100%; border:0; background:#fff; }
-          </style>
-        </head>
-        <body>
-          <div class="wrap">
-            <div class="bar">Interactive Marimo Notebook · Embedded Wide View</div>
-            <div class="frame">
-              <iframe src="${iframeSrc}" title="Marimo" sandbox="allow-scripts allow-forms allow-popups allow-modals allow-same-origin"></iframe>
-            </div>
-          </div>
-        </body>
-        </html>`;
-      return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html' } });
-    }
-    
-    // Debug route to check container port configuration
-    if (url.pathname === '/container/port') {
-      return new Response(String(env.MARIMO_PORT ?? "8080"), { headers: { "content-type": "text/plain" } });
-    }
-    
-    // Handle CORS preflight for API endpoints
-    if (request.method === 'OPTIONS' && url.pathname.startsWith('/api/')) {
-      return new Response(null, { 
-        status: 204, 
-        headers: corsHeaders
-      });
-    }
-    
-    // ⛔ Never proxy these — handle in Worker
-    if (url.pathname === '/api/generate-marimo' && request.method === 'POST') {
-      console.log('🎯 Handling AI generation endpoint directly');
-      try {
-        const payload = await request.json() as { 
-          title: string; 
-          language: string; 
-          mermaid?: string; 
-          flow?: any 
-        };
-        
-        if (!payload.title || !payload.language) {
-          return createErrorResponse('Missing required fields: title, language', 400);
-        }
-
-        // Import the Marimo generator prompt
-        console.log('📝 Importing Marimo generator prompt...');
-        const { MARIMO_GENERATOR_PROMPT } = await import('../../apps/backend/src/prompts/marimoGenerator');
-        console.log('✅ Prompt imported successfully');
-
-        // Call OpenAI API
-        const llm = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: env.OPENAI_MODEL_MARIMO ?? "gpt-4o-mini",
-            response_format: { type: "json_object" },
-            temperature: 0.2,
-            messages: [
-              { role: "system", content: MARIMO_GENERATOR_PROMPT },
-              { role: "user", content: JSON.stringify(payload) },
-            ],
-          }),
-        });
-        
-        if (!llm.ok) {
-          console.error('OpenAI API error:', llm.status, llm.statusText);
-          return createErrorResponse("openai", 502);
-        }
-        
-        const data = await llm.json() as { 
-          choices: Array<{ message: { content: string } }> 
-        };
-        const out = JSON.parse(data.choices[0].message.content || "{}");
-
-        const filename = out.filename || `${crypto.randomUUID()}.py`;
-        const content: string = out.content || "";
-
-        // Validate Marimo content
-        if (!/import\s+marimo\s+as\s+mo/.test(content) || 
-            !/app\s*=\s*mo\.App\(\)/.test(content) || 
-            !/(@app\.cell|@mo\.cell)/.test(content)) {
-          console.error('Invalid Marimo content generated:', content.substring(0, 200));
-          return createErrorResponse("invalid_marimo", 400);
-        }
-
-        // Save to container via Durable Object
-        const durableObjectId = env.MARIMO.idFromName("marimo-container");
-        const durableObject = env.MARIMO.get(durableObjectId);
-        
-        // Create a proper Request object with absolute URL for the save endpoint
-        const saveUrl = new URL('/api/save', request.url);
-        const saveRequest = new Request(saveUrl.toString(), {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            ...(env.MARIMO_TOKEN ? { "Authorization": `Bearer ${env.MARIMO_TOKEN}` } : {})
-          },
-          body: JSON.stringify({ 
-            id: filename.replace('.py', ''),
-            filename: filename, 
-            content 
-          }),
-        });
-        const saveResponse = await durableObject.fetch(saveRequest);
-        
-        if (!saveResponse.ok) {
-          console.error('Container save error:', saveResponse.status, saveResponse.statusText);
-          const errorText = await saveResponse.text();
-          console.error('Container error details:', errorText);
-          return createErrorResponse("container_save", 502);
-        }
-
-        const saveData = await saveResponse.json() as { ok: boolean; url: string; id: string; filename: string };
-        
-        if (!saveData.ok || !saveData.url) {
-          console.error('Container returned invalid response:', saveData);
-          return createErrorResponse("container_save_invalid_response", 502);
-        }
-
-        // Return the URL that the frontend can iframe
-        const notebookUrl = `${url.origin}${saveData.url}`;
-        return createJsonResponse({ 
-          ok: true, 
-          url: notebookUrl, 
-          name: saveData.filename,
-          id: saveData.id
-        });
-      } catch (error) {
-        console.error('AI generation error:', error);
-        return createErrorResponse(error instanceof Error ? error.message : 'Unknown error');
-      }
-    }
-    
-    // Handle WebSocket upgrade requests
-    if (request.headers.get('Upgrade') === 'websocket') {
-      try {
-        const durableObjectId = env.MARIMO.idFromName("marimo-container");
-        const container = env.MARIMO.get(durableObjectId);
-        const response = await container.fetch(request);
-        
-        if (response.status === 101) {
-          return response; // WebSocket upgrade successful
-        }
-        
-        return addCorsHeaders(response);
-      } catch (error) {
-        console.error("WebSocket error:", error);
-        return new Response("WebSocket connection failed", { 
-          status: 500, 
-          headers: corsHeaders 
-        });
-      }
-    }
-    
-    // ✅ Only proxy non-API paths to container
-    if (!shouldProxy(url)) {
-      console.error(`❌ Attempted to proxy API endpoint: ${url.pathname}`);
-      return createErrorResponse('API endpoint not found', 404);
-    }
-    
-    console.log(`🔄 Proxying to container: ${request.method} ${url.pathname}`);
-    
-    try {
-      const durableObjectId = env.MARIMO.idFromName("marimo-container");
-      const container = env.MARIMO.get(durableObjectId);
-      
-      console.log(`📡 Proxying request to container: ${request.method} ${url.pathname}`);
-      const response = await container.fetch(request);
-      
-      if (response.status === 101) {
-        return response; // WebSocket upgrade
-      }
-      
-      if (response.status < 200 || response.status >= 600) {
-        console.error("Invalid status code from container:", response.status);
-        return new Response("Container returned invalid status", { 
-          status: 502,
-          headers: corsHeaders
-        });
-      }
-      
-      return addCorsHeaders(response);
-    } catch (error) {
-      console.error("Container error:", error);
-      
-      // Return error page for root path
-      if (url.pathname === '/') {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        return new Response(`
-          <!DOCTYPE html>
-          <html>
-          <head><title>Marimo Notebook - Error</title></head>
-          <body>
-            <h1>⚠️ Container Error</h1>
-            <p>The Marimo container encountered an error: ${errorMessage}</p>
-            <p>Please try refreshing the page or contact support.</p>
-            <script>
-              setTimeout(() => window.location.reload(), 5000);
-            </script>
-          </body>
-          </html>
-        `, {
-          status: 500,
-          headers: { 'Content-Type': 'text/html' }
-        });
-      }
-      
-      return new Response("Container error", { status: 500 });
-    }
+  async fetch(req: Request, env: Env): Promise<Response> {
+    // Single instance is fine; use any stable name
+    const container = getContainer(env.MARIMO, "singleton");
+    // Ensure the container is up and listening before proxying
+    await container.startAndWaitForPorts(8080);
+    // Forward the request as-is to the container (defaults to defaultPort)
+    return container.fetch(req);
   },
 };
+
 

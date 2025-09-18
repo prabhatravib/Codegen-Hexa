@@ -53,7 +53,7 @@ def __():
     return slider
 
 @app.cell
-def __():
+def __(slider):
     """Display the slider value"""
     slider_value = slider.value
     mo.md(f"**Slider value:** {{slider_value}}")
@@ -110,3 +110,7 @@ def __():
 
 if __name__ == "__main__":
     generate_uuid_notebook()
+
+
+
+
