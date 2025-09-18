@@ -121,9 +121,10 @@ marimoRouter.post('/generate', async (c) => {
     }
     // Ensure absolute URL for the frontend
     // Prefer explicit embedded viewer route
+    // Respect the container's suggested URL; fall back to the root editor.
     let marimoUrlPath = containerData.url
-    if (!marimoUrlPath || marimoUrlPath === '/' || marimoUrlPath === '/index.html') {
-      marimoUrlPath = '/embed'
+    if (!marimoUrlPath || marimoUrlPath === '' || marimoUrlPath === '/index.html') {
+      marimoUrlPath = '/'
     }
     let marimoUrlAbs = marimoUrlPath
     if (marimoUrlAbs && !/^https?:\/\//i.test(marimoUrlAbs)) {
