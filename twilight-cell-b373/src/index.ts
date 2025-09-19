@@ -1,4 +1,4 @@
-import { Container, getContainer } from "@cloudflare/containers";
+import { Container, getContainer, type StopParams } from "@cloudflare/containers";
 import type { DurableObject } from "cloudflare:workers";
 export { NotebookStore } from './notebook_store';
 
@@ -7,14 +7,59 @@ export interface Env {
   MARIMO: DurableObjectNamespace<MarimoContainer>;
 }
 
+
+function createServiceWorkerScript(): string {
+  return `self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', () => self.clients.claim());`;
+}
+
+function createServiceWorkerResponse(): Response {
+  return new Response(createServiceWorkerScript(), {
+    status: 200,
+    headers: { "Content-Type": "application/javascript" },
+  });
+}
+
 export class MarimoContainer extends Container {
   // Keep these in code as an extra guard; wrangler also sets them
   defaultPort = 8080;
   requiredPorts = [8080];
   sleepAfter = "15m";
 
+  private latestNotebookContent: string | null = null;
+  private latestNotebookId: string | null = null;
+
   constructor(ctx: DurableObject["ctx"], env: Env) {
     super(ctx, env);
+  }
+
+  private async ensureContainerReady(): Promise<void> {
+    const envVars = { ...(this.envVars ?? {}) };
+    await this.start({ envVars });
+    await this.startAndWaitForPorts(this.defaultPort, {
+      portReadyTimeoutMS: 60000,
+      waitInterval: 500,
+    });
+    await sleep(300);
+  }
+
+  private async restartContainer(): Promise<void> {
+    try {
+      await this.stop();
+    } catch (error) {
+      console.warn('[MarimoContainer] stop during restart failed:', error instanceof Error ? error.message : error);
+    }
+    await this.ensureContainerReady();
+  }
+
+  override onStop(params: StopParams): void | Promise<void> {
+    console.log('[MarimoContainer] container stopped', params);
+    return super.onStop(params);
+  }
+
+  override onError(error: unknown): any {
+    console.error('[MarimoContainer] container error', error);
+    return super.onError(error);
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -23,12 +68,7 @@ export class MarimoContainer extends Container {
 
     // Short-circuit service worker requests to avoid unnecessary container startup
     if (url.pathname === "/public-files-sw.js") {
-      const body = `self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', () => self.clients.claim());`;
-      return new Response(body, {
-        status: 200,
-        headers: { "Content-Type": "application/javascript" },
-      });
+      return createServiceWorkerResponse();
     }
 
     // Handle minimal API inside the DO
@@ -56,11 +96,18 @@ self.addEventListener('activate', () => self.clients.claim());`;
         // Restart container with the notebook content to ensure updates take effect
         try {
           await this.stop();
-        } catch (_) {
-          // ignore stop errors (container may not be running)
+        } catch (stopError) {
+          console.warn('[MarimoContainer] stop before reload failed:', stopError instanceof Error ? stopError.message : stopError);
         }
-        await this.start({ envVars: { NOTEBOOK_CONTENT: content } });
-        await this.startAndWaitForPorts(this.defaultPort);
+        const priorEnv = this.envVars ?? {};
+        this.envVars = { ...priorEnv, NOTEBOOK_CONTENT: content };
+        this.latestNotebookContent = content;
+        this.latestNotebookId = id;
+        try {
+          await this.ensureContainerReady();
+        } catch (warmError) {
+          console.error('[MarimoContainer] Failed to prewarm container after save:', warmError instanceof Error ? warmError.message : warmError);
+        }
 
         // Return the Worker root; it reliably serves the Marimo UI
         const urlPath = "/";
@@ -82,51 +129,39 @@ self.addEventListener('activate', () => self.clients.claim());`;
       const internalPath = url.pathname.replace(/^\/marimo/, "");
       const target = new URL(`http://localhost:${this.defaultPort}${internalPath}${url.search}`);
       const req = new Request(target.toString(), request);
-      console.log(`🌐 Routing to Marimo (rewritten): ${internalPath || "/"}`);
+      console.log(`[marimo] Proxy request for ${internalPath || '/'} via container`);
+      const proxyRequest = async () => {
+        const proxied = await this.containerFetch(req, this.defaultPort);
+        return widenHtmlIfNeeded(proxied);
+      };
       try {
-        // Ensure container is started and ready
-        await this.start();
-        await this.startAndWaitForPorts(this.defaultPort);
-        const resp = await this.containerFetch(req, this.defaultPort);
-        return await widenHtmlIfNeeded(resp);
-      } catch (e) {
-        console.warn('Proxy to Marimo failed, retrying after ensuring readiness...', e);
-        await this.stop();
-        await this.start();
-        await this.startAndWaitForPorts(this.defaultPort);
-        const resp2 = await this.containerFetch(req, this.defaultPort);
-        return await widenHtmlIfNeeded(resp2);
+        return await proxyRequest();
+      } catch (error) {
+        if (!isContainerDown(error)) {
+          throw error;
+        }
+        console.warn('[marimo] Proxy failed, restarting container...', error);
+        await this.restartContainer();
+        return await proxyRequest();
       }
     }
 
     // Default: route to Marimo on defaultPort
-    console.log(`🌐 Default routing to Marimo on port ${this.defaultPort}: ${url.pathname}`);
+    console.log(`[marimo] Proxy request for ${url.pathname}`);
+    const proxyRoot = async () => {
+      const response = await this.containerFetch(request, this.defaultPort);
+      return widenHtmlIfNeeded(response);
+    };
     try {
-      // Ensure container is started and ready
-      console.log('🚀 Starting container...');
-      await this.start();
-      console.log('⏳ Waiting for ports to be ready...');
-      await this.startAndWaitForPorts(this.defaultPort);
-      console.log('✅ Container is ready, proxying request...');
-      
-      const resp = await this.containerFetch(request, this.defaultPort);
-      return await widenHtmlIfNeeded(resp);
-    } catch (e) {
-      console.error('❌ Default route proxy failed:', e);
-      console.log('🔄 Retrying after ensuring readiness...');
-      
-      try {
-        // Force restart the container
-        await this.stop();
-        await this.start();
-        await this.startAndWaitForPorts(this.defaultPort);
-        
-        const resp2 = await this.containerFetch(request, this.defaultPort);
-        return await widenHtmlIfNeeded(resp2);
-      } catch (e2) {
-        console.error('❌ Retry also failed:', e2);
-        throw e2;
+      return await proxyRoot();
+    } catch (error) {
+      if (!isContainerDown(error)) {
+        console.error('[marimo] Proxy failed with non-recoverable error:', error);
+        throw error;
       }
+      console.warn('[marimo] Container appears stopped, restarting...', error);
+      await this.restartContainer();
+      return await proxyRoot();
     }
   }
 }
@@ -141,6 +176,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, Upgrade, Connection, X-Requested-With',
   'Access-Control-Max-Age': '86400',
 };
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+function isContainerDown(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return message.includes('container is not running') || message.includes('not listening');
+}
 
 // Helper functions
 function createJsonResponse(data: any, status: number = 200): Response {
@@ -211,6 +253,12 @@ async function widenHtmlIfNeeded(response: Response): Promise<Response> {
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
+    const url = new URL(req.url);
+
+    if (url.pathname === "/public-files-sw.js") {
+      return createServiceWorkerResponse();
+    }
+
     // Single instance is fine; use any stable name
     const container = getContainer(env.MARIMO, "singleton");
     // Ensure the container is up and listening before proxying
@@ -219,5 +267,9 @@ export default {
     return container.fetch(req);
   },
 };
+
+
+
+
 
 

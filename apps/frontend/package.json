@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "deploy": "tsc -b && vite build && wrangler deploy",
+    "build": "node ./scripts/clean-dist.mjs && tsc -b && vite build",
+    "deploy": "node ./scripts/clean-dist.mjs && tsc -b && vite build && wrangler deploy",
     "preview": "vite preview",
     "type-check": "tsc --noEmit"
   },

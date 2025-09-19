@@ -12,7 +12,7 @@ export async function generateMarimoNotebook(
   try {
     // AI-powered generation only
     console.log('Using AI-powered Marimo generation')
-    const plainPython = await generatePlainFromFlow(prompt, mermaid, language, openaiApiKey)
+    const plainPython = await generatePlainFromFlow(prompt, mermaid, language, openaiApiKey, flowGraph)
     const marimoFromPlain = plainToMarimo(plainPython)
     const sanitizedMarimo = sanitizeMarimo(marimoFromPlain)
     
@@ -22,3 +22,4 @@ export async function generateMarimoNotebook(
     throw error // Let the calling code handle the error
   }
 }
+
