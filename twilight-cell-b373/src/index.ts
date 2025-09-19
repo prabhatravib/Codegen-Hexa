@@ -28,19 +28,41 @@ export class MarimoContainer extends Container {
 
   private latestNotebookContent: string | null = null;
   private latestNotebookId: string | null = null;
+  private readinessPromise: Promise<void> | null = null;
 
   constructor(ctx: DurableObject["ctx"], env: Env) {
     super(ctx, env);
   }
 
   private async ensureContainerReady(): Promise<void> {
+    if (this.readinessPromise) {
+      return this.readinessPromise;
+    }
+    this.readinessPromise = this._ensureContainerReady();
+    try {
+      await this.readinessPromise;
+    } finally {
+      this.readinessPromise = null;
+    }
+  }
+
+  private async _ensureContainerReady(): Promise<void> {
     const envVars = { ...(this.envVars ?? {}) };
     await this.start({ envVars });
     await this.startAndWaitForPorts(this.defaultPort, {
       portReadyTimeoutMS: 60000,
       waitInterval: 500,
     });
-    await sleep(300);
+    try {
+      const probe = await this.containerFetch(`http://localhost:${this.defaultPort}/`, { method: 'GET' }, this.defaultPort);
+      if (!probe.ok) {
+        console.warn('[MarimoContainer] readiness probe returned', probe.status);
+      }
+      probe.body?.cancel?.();
+    } catch (probeError) {
+      console.warn('[MarimoContainer] readiness probe failed:', probeError instanceof Error ? probeError.message : probeError);
+    }
+    await sleep(500);
   }
 
   private async restartContainer(): Promise<void> {
@@ -125,6 +147,11 @@ export class MarimoContainer extends Container {
 
     // Marimo UI on defaultPort (proxy everything under /marimo/*)
     if (url.pathname.startsWith("/marimo/")) {
+      try {
+        await this.ensureContainerReady();
+      } catch (ensureError) {
+        console.warn('[marimo] ensureContainerReady before /marimo proxy failed:', ensureError instanceof Error ? ensureError.message : ensureError);
+      }
       // Rewrite /marimo/* -> /* for the container, since Marimo serves /edit/* at root
       const internalPath = url.pathname.replace(/^\/marimo/, "");
       const target = new URL(`http://localhost:${this.defaultPort}${internalPath}${url.search}`);
@@ -147,6 +174,11 @@ export class MarimoContainer extends Container {
     }
 
     // Default: route to Marimo on defaultPort
+    try {
+      await this.ensureContainerReady();
+    } catch (ensureError) {
+      console.warn('[marimo] ensureContainerReady before default proxy failed:', ensureError instanceof Error ? ensureError.message : ensureError);
+    }
     console.log(`[marimo] Proxy request for ${url.pathname}`);
     const proxyRoot = async () => {
       const response = await this.containerFetch(request, this.defaultPort);
