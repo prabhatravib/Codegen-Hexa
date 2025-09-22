@@ -7,12 +7,19 @@ import { DeepDivePanel } from './DeepDivePanel'
 import { prepareDiagramData, DiagramData } from '../services/diagramCapture'
 import MarimoNotebook from './MarimoNotebook'
 
+interface MarimoData {
+  marimoContent: string
+  marimoUrl: string
+  prompt: string
+}
+
 interface CodeGenInterfaceProps {
   onDiagramDataChange?: (data: DiagramData | null) => void
   onCodeFlowStatusChange?: (status: 'sent' | 'not-sent') => void
+  onMarimoDataChange?: (data: MarimoData | null) => void
 }
 
-export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDataChange, onCodeFlowStatusChange }) => {
+export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDataChange, onCodeFlowStatusChange, onMarimoDataChange }) => {
   const [prompt, setPrompt] = useState('')
   const [selectedLanguage, setSelectedLanguage] = useState('python')
   const [step, setStep] = useState<'input' | 'diagram' | 'marimo'>('input')
@@ -26,6 +33,7 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
     generateMarimoNotebook,
     diagram,
     marimoNotebook,
+    marimoContent,
     isLoading,
     error,
     reset
@@ -69,6 +77,19 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
       onDiagramDataChange?.(null)
     }
   }, [diagram, prompt])
+
+  // Update Marimo data when it changes
+  useEffect(() => {
+    if (marimoContent && marimoNotebook && prompt) {
+      const marimoData = {
+        marimoContent: marimoContent,
+        marimoUrl: marimoNotebook,
+        prompt: prompt
+      }
+      // Marimo data sent to parent
+      onMarimoDataChange?.(marimoData)
+    }
+  }, [marimoContent, marimoNotebook, prompt, onMarimoDataChange])
 
   const handleNodeSelect = (nodeName: string) => {
     if (nodeName) {
@@ -154,6 +175,7 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
     setPrompt('')
     setSelectedNode(null)
     onDiagramDataChange?.(null)
+    onMarimoDataChange?.(null)
     // Clear duplicate detection when starting over
     lastSentDataRef.current = null
     console.log('🔄 Cleared all data - reset duplicate cache')
@@ -224,9 +246,6 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
                   
                   {/* Action Buttons - Below the diagram */}
                   <div className="diagram-actions mt-4">
-                    <div className="text-sm text-white/60 mb-3 text-center">
-                      💡 <strong>Tip:</strong> Click on any node in the flowchart to ask deep dive questions about it!
-                    </div>
                     <div className="flex gap-3 justify-center">
                       <button onClick={handleGenerateMarimoNotebook} disabled={isLoading} className="btn-primary flex items-center justify-center disabled:opacity-50">
                         {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black" /> : (<><Code className="w-4 h-4 mr-2"/>Generate Marimo Notebook</>)}
@@ -253,7 +272,7 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
                     <div className="text-center text-white/60 p-8">
                       <div className="text-4xl mb-4">🔍</div>
                       <h4 className="text-lg font-medium mb-2">Deep Dive Panel</h4>
-                      <p className="text-sm">Click on any node in the flowchart to ask questions about it and get detailed explanations.</p>
+                      <p className="text-sm">Click on any node in the flowchart to ask questions and get detailed explanations.</p>
                     </div>
                   </div>
                 )}
@@ -262,19 +281,11 @@ export const CodeGenInterface: React.FC<CodeGenInterfaceProps> = ({ onDiagramDat
           </motion.div>
         )}
 
-        {/* Placeholder content when no diagram exists */}
-        {!diagram && (
-          <div className="text-center text-white/60 py-12">
-            <div className="text-4xl mb-4">📝</div>
-            <h3 className="text-lg font-medium mb-2">Ready to Generate Code</h3>
-            <p className="text-sm">Enter your code description above and click "Create CodeFlow" to get started.</p>
-          </div>
-        )}
       </div>
 
       {/* Marimo Notebook Section - Appears below the flowchart when notebook is generated */}
       {step === 'marimo' && marimoNotebook && (
-        <div style={{ width: '100vw', marginLeft: 'calc(-50vw + 50%)', padding: '0 1rem' }}>
+        <div className="mt-8 p-6 rounded-lg bg-gray-800/50 border border-gray-700/50">
           <MarimoNotebook
             marimoNotebook={marimoNotebook}
             onBack={backToFlowchart}

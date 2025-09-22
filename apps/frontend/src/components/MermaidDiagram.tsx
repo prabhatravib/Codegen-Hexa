@@ -46,9 +46,21 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
           containerRef.current.innerHTML = svg
           setIsRendered(true)
           
-          // Add click event listeners to nodes after rendering
+          // Add click event listeners to nodes after rendering with a small delay
+          // to ensure DOM is fully ready
           if (onNodeSelect) {
-            addNodeClickListeners()
+            setTimeout(() => {
+              addNodeClickListeners()
+              
+              // Fallback: try again after a longer delay if no nodes were found
+              setTimeout(() => {
+                const svg = containerRef.current?.querySelector('svg')
+                if (svg && !svg.querySelector('[data-node-clickable="true"]')) {
+                  // Retry: Adding click listeners after longer delay...
+                  addNodeClickListeners()
+                }
+              }, 500)
+            }, 100)
           }
         }
       }).catch((error) => {
@@ -78,54 +90,122 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
     const svg = containerRef.current.querySelector('svg')
     if (!svg) return
 
-    // Find all node groups and other clickable elements
-    const nodes = svg.querySelectorAll('g.node, g[id*="flowchart"], g[id*="graph"], .node, .cluster')
-    nodes.forEach(node => {
-      // Add cursor pointer style to the node group
-      if (node instanceof HTMLElement) {
-        node.style.cursor = 'pointer'
-      }
+    // Adding click listeners to Mermaid diagram nodes...
 
-      // Also add cursor pointer to all child elements to ensure consistent behavior
-      const childElements = node.querySelectorAll('rect, circle, ellipse, polygon, path, text')
-      childElements.forEach(child => {
-        if (child instanceof HTMLElement) {
-          child.style.cursor = 'pointer'
+    // More comprehensive node selection - try different selectors
+    const nodeSelectors = [
+      'g.node',
+      'g[id*="flowchart"]',
+      'g[id*="graph"]', 
+      '.node',
+      '.cluster',
+      'g[class*="node"]',
+      'g[class*="flowchart"]'
+    ]
+    
+    let totalNodes = 0
+    nodeSelectors.forEach(selector => {
+      const nodes = svg.querySelectorAll(selector)
+      // Found nodes with selector
+      
+      nodes.forEach((node) => {
+        totalNodes++
+        
+        // Add cursor pointer style to the node group
+        if (node instanceof HTMLElement) {
+          node.style.cursor = 'pointer'
+          node.style.userSelect = 'none'
+          
+          // Add a data attribute to help identify nodes
+          node.setAttribute('data-node-clickable', 'true')
         }
-      })
 
-      // Add click event listener
-      node.addEventListener('click', (e) => {
-        e.stopPropagation()
-        
-        // Get the node text
-        const textElement = node.querySelector('text, .nodeLabel')
-        let nodeText = ''
-        
-        if (textElement) {
-          const tspans = textElement.querySelectorAll('tspan')
-          if (tspans.length > 0) {
-            nodeText = Array.from(tspans)
-              .map(t => t.textContent?.trim())
-              .filter(Boolean)
-              .join(' ')
-          } else {
-            nodeText = textElement.textContent?.trim() || ''
+        // Also add cursor pointer to all child elements to ensure consistent behavior
+        const childElements = node.querySelectorAll('rect, circle, ellipse, polygon, path, text')
+        childElements.forEach(child => {
+          if (child instanceof HTMLElement) {
+            child.style.cursor = 'pointer'
+            child.style.userSelect = 'none'
           }
-        }
+        })
 
-        if (nodeText && onNodeSelect) {
-          onNodeSelect(nodeText)
-        }
+        // Add click event listener with more robust text extraction
+        node.addEventListener('click', (e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          
+          // Node clicked
+          
+          // Try multiple ways to get the node text
+          let nodeText = ''
+          
+          // Method 1: Look for text elements
+          const textElement = node.querySelector('text, .nodeLabel')
+          if (textElement) {
+            const tspans = textElement.querySelectorAll('tspan')
+            if (tspans.length > 0) {
+              nodeText = Array.from(tspans)
+                .map(t => t.textContent?.trim())
+                .filter(Boolean)
+                .join(' ')
+            } else {
+              nodeText = textElement.textContent?.trim() || ''
+            }
+          }
+          
+          // Method 2: Look for title attribute
+          if (!nodeText && node.getAttribute('title')) {
+            nodeText = node.getAttribute('title')?.trim() || ''
+          }
+          
+          // Method 3: Look for data attributes
+          if (!nodeText && node.getAttribute('data-label')) {
+            nodeText = node.getAttribute('data-label')?.trim() || ''
+          }
+          
+          // Method 4: Try to get text from any child element
+          if (!nodeText) {
+            const allText = node.textContent?.trim()
+            if (allText) {
+              nodeText = allText
+            }
+          }
+
+          // Extracted node text
+
+          if (nodeText && onNodeSelect) {
+            // Calling onNodeSelect
+            onNodeSelect(nodeText)
+          } else {
+            // No node text found or onNodeSelect not available
+          }
+        })
+        
+        // Add hover effects
+        node.addEventListener('mouseenter', () => {
+          if (node instanceof HTMLElement) {
+            node.style.opacity = '0.8'
+          }
+        })
+        
+        node.addEventListener('mouseleave', () => {
+          if (node instanceof HTMLElement) {
+            node.style.opacity = '1'
+          }
+        })
       })
     })
 
+    // Total nodes processed
+
     // Add click listener to SVG background to deselect
     svg.addEventListener('click', (e) => {
+      // Only deselect if clicking on the background, not on nodes
       if (e.target === svg || 
           (e.target instanceof HTMLElement && 
            e.target.tagName === 'rect' && 
            e.target.getAttribute('fill') === 'none')) {
+        // Deselecting node - clicked on background
         if (onNodeSelect) {
           onNodeSelect('')
         }

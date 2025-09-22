@@ -155,6 +155,7 @@ marimoRouter.post('/generate', async (c) => {
     return c.json({
       success: true,
       marimoUrl: marimoUrlAbs,
+      marimoContent: marimoNotebook, // Include the raw notebook content
       notebookId: containerData.id,
       diagram: diagram,
       language: language,

@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react'
 interface CodeGenState {
   diagram: string | null
   marimoNotebook: string | null
+  marimoContent: string | null
   isLoading: boolean
   error: string | null
 }
@@ -11,6 +12,7 @@ export const useCodeGen = () => {
   const [state, setState] = useState<CodeGenState>({
     diagram: null,
     marimoNotebook: null,
+    marimoContent: null,
     isLoading: false,
     error: null
   })
@@ -97,6 +99,7 @@ export const useCodeGen = () => {
         setState(prev => ({
           ...prev,
           marimoNotebook: data.marimoUrl, // This is the interactive URL
+          marimoContent: data.marimoContent, // Store the raw notebook content
           isLoading: false,
           error: null
         }))
@@ -119,6 +122,7 @@ export const useCodeGen = () => {
     setState({
       diagram: null,
       marimoNotebook: null,
+      marimoContent: null,
       isLoading: false,
       error: null
     })

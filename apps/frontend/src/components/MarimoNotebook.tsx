@@ -126,7 +126,6 @@ export default function MarimoNotebook({ marimoNotebook, onBack }: MarimoNoteboo
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="marimo-notebook-container"
-      style={{ width: '100%', maxWidth: '100%' }}
     >
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold text-white">Interactive Marimo Notebook</h3>

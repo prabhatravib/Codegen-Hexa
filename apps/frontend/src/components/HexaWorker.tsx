@@ -2,14 +2,22 @@ import React, { useState, useEffect, useRef } from 'react'
 import { sessionManager } from '../utils/sessionManager'
 import { DiagramData } from '../services/diagramCapture'
 
+interface MarimoData {
+  marimoContent: string
+  marimoUrl: string
+  prompt: string
+}
+
 interface HexaWorkerProps {
   codeFlowStatus: 'sent' | 'not-sent'
   diagramData: DiagramData | null
+  marimoData: MarimoData | null
 }
 
-export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramData }) => {
+export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramData, marimoData }) => {
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false) // Start with voice OFF
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [notebookStatus, setNotebookStatus] = useState<'sent' | 'not-sent'>('not-sent')
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
   // Subscribe to session changes
@@ -40,7 +48,6 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
       })
       
       if (dataHash === lastSentDataRef.current) {
-        console.log('⏭️ Skipping duplicate diagram data send')
         return
       }
       
@@ -54,10 +61,11 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          mermaidCode: diagramData.mermaidCode,
-          diagramImage: diagramData.diagramImage,
+          sessionId: sessionId,
+          text: diagramData.mermaidCode,
           prompt: diagramData.prompt,
-          type: 'diagram'
+          type: 'diagram',
+          diagramImage: diagramData.diagramImage
         })
       }).then(response => {
         if (response.ok) {
@@ -74,6 +82,60 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
       })
     }
   }, [diagramData])
+
+  // Send Marimo data to voice worker via API when it changes
+  const lastSentMarimoRef = useRef<string | null>(null)
+  
+  useEffect(() => {
+    if (marimoData) {
+      // Create a hash to prevent duplicate sends
+      const dataHash = JSON.stringify({
+        marimoContent: marimoData.marimoContent,
+        prompt: marimoData.prompt
+      })
+      
+      if (dataHash === lastSentMarimoRef.current) {
+        return
+      }
+      
+      lastSentMarimoRef.current = dataHash
+      console.log('📤 Sending Marimo data to voice worker via API:', marimoData)
+      
+      // Send Marimo data to voice worker via API call
+      // Transform Marimo data to match worker expectations
+      const enhancedPrompt = marimoData.marimoUrl 
+        ? `${marimoData.prompt}\n\nMarimo URL: ${marimoData.marimoUrl}`.trim()
+        : marimoData.prompt
+
+      fetch('https://hexa-worker.prabhatravib.workers.dev/api/external-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId: sessionId,
+          text: marimoData.marimoContent,
+          prompt: enhancedPrompt,
+          type: 'marimo'
+        })
+      }).then(response => {
+        if (response.ok) {
+          console.log('✅ Marimo data sent to voice worker successfully')
+          setNotebookStatus('sent')
+        } else {
+          console.error('❌ Failed to send Marimo data to voice worker:', response.status)
+          // Reset hash on failure so it can be retried
+          lastSentMarimoRef.current = null
+          setNotebookStatus('not-sent')
+        }
+      }).catch(error => {
+        console.error('❌ Error sending Marimo data to voice worker:', error)
+        // Reset hash on error so it can be retried
+        lastSentMarimoRef.current = null
+        setNotebookStatus('not-sent')
+      })
+    }
+  }, [marimoData])
 
   const toggleVoice = () => {
     setIsVoiceEnabled(!isVoiceEnabled)
@@ -129,6 +191,17 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
           }`}
         >
           {codeFlowStatus === 'sent' ? 'Code Flow Sent' : 'No Code Flow Sent'}
+        </div>
+      </div>
+
+      {/* Notebook Status Indicator */}
+      <div className="mb-3">
+        <div 
+          className={`text-sm font-medium ${
+            notebookStatus === 'sent' ? 'text-green-400' : 'text-white'
+          }`}
+        >
+          {notebookStatus === 'sent' ? 'Notebook Details Sent' : 'Notebook Details Not Sent'}
         </div>
       </div>
 
