@@ -1,5 +1,4 @@
-# syntax=docker/dockerfile:1.4
-FROM python:3.11-slim
+FROM public.ecr.aws/docker/library/python:3.11-slim
 
 WORKDIR /app
 
@@ -30,3 +29,4 @@ ENV PYTHONUNBUFFERED=1 \
 EXPOSE 8080
 
 CMD ["/app/start.sh"]
+

@@ -29,9 +29,74 @@ export class MarimoContainer extends Container {
   private latestNotebookContent: string | null = null;
   private latestNotebookId: string | null = null;
   private readinessPromise: Promise<void> | null = null;
+  private alarmLeadLogged = false;
+  private lastNotListeningLog = 0;
+  private notListeningRetries = 0;
 
   constructor(ctx: DurableObject["ctx"], env: Env) {
     super(ctx, env);
+    this.patchAlarmScheduling();
+  }
+
+  private async handleNotListening(context: string): Promise<void> {
+    const now = Date.now();
+    if (now - this.lastNotListeningLog > 5000) {
+      console.warn(`[marimo] Container not listening yet during ${context}, retrying after short wait`);
+      this.lastNotListeningLog = now;
+    }
+
+    this.notListeningRetries += 1;
+    if (this.notListeningRetries > 5) {
+      console.warn("[marimo] Container still not listening after retries, forcing restart");
+      this.notListeningRetries = 0;
+      await this.restartContainer();
+      return;
+    }
+
+    await sleep(250);
+    await this.ensureContainerReady();
+  }
+
+  private patchAlarmScheduling(): void {
+    const storage = this.ctx.storage;
+    const existing = storage.setAlarm as typeof storage.setAlarm & { __marimoAdjusted?: boolean };
+    if (existing.__marimoAdjusted) {
+      return;
+    }
+
+    const originalSetAlarm = storage.setAlarm.bind(storage) as typeof storage.setAlarm;
+    const minimumLeadMs = 50;
+
+    const patchedSetAlarm = (async (scheduledTime: Parameters<typeof originalSetAlarm>[0], options?: Parameters<typeof originalSetAlarm>[1]) => {
+      const initial = scheduledTime instanceof Date ? scheduledTime.getTime() : scheduledTime;
+      let targetMs = initial;
+
+      if (typeof targetMs !== "number" || Number.isNaN(targetMs)) {
+        await originalSetAlarm(scheduledTime, options);
+        return;
+      }
+
+      const minAllowed = Date.now() + minimumLeadMs;
+      if (targetMs < minAllowed) {
+        if (!this.alarmLeadLogged) {
+          console.warn('[MarimoContainer] adjusted alarm schedule to avoid past timestamps');
+          this.alarmLeadLogged = true;
+        }
+        targetMs = minAllowed;
+      }
+
+      const normalized = scheduledTime instanceof Date ? new Date(targetMs) : targetMs;
+
+      try {
+        await originalSetAlarm(normalized, options);
+      } catch (error) {
+        console.error('[MarimoContainer] setAlarm failure', error);
+        throw error;
+      }
+    }) as typeof storage.setAlarm & { __marimoAdjusted?: boolean };
+
+    patchedSetAlarm.__marimoAdjusted = true;
+    storage.setAlarm = patchedSetAlarm;
   }
 
   private async ensureContainerReady(): Promise<void> {
@@ -159,6 +224,7 @@ export class MarimoContainer extends Container {
       console.log(`[marimo] Proxy request for ${internalPath || '/'} via container`);
       const proxyRequest = async () => {
         const proxied = await this.containerFetch(req, this.defaultPort);
+        this.notListeningRetries = 0;
         return widenHtmlIfNeeded(proxied);
       };
       try {
@@ -166,6 +232,10 @@ export class MarimoContainer extends Container {
       } catch (error) {
         if (!isContainerDown(error)) {
           throw error;
+        }
+        if (isNotListening(error)) {
+          await this.handleNotListening('marimo proxied request');
+          return await proxyRequest();
         }
         console.warn('[marimo] Proxy failed, restarting container...', error);
         await this.restartContainer();
@@ -182,6 +252,7 @@ export class MarimoContainer extends Container {
     console.log(`[marimo] Proxy request for ${url.pathname}`);
     const proxyRoot = async () => {
       const response = await this.containerFetch(request, this.defaultPort);
+      this.notListeningRetries = 0;
       return widenHtmlIfNeeded(response);
     };
     try {
@@ -190,6 +261,10 @@ export class MarimoContainer extends Container {
       if (!isContainerDown(error)) {
         console.error('[marimo] Proxy failed with non-recoverable error:', error);
         throw error;
+      }
+      if (isNotListening(error)) {
+        await this.handleNotListening(url.pathname);
+        return await proxyRoot();
       }
       console.warn('[marimo] Container appears stopped, restarting...', error);
       await this.restartContainer();
@@ -213,7 +288,12 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 function isContainerDown(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error ?? '');
-  return message.includes('container is not running') || message.includes('not listening');
+  return message.includes('container is not running');
+}
+
+function isNotListening(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return message.includes('not listening');
 }
 
 // Helper functions
@@ -299,6 +379,7 @@ export default {
     return container.fetch(req);
   },
 };
+
 
 
 
